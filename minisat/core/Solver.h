@@ -259,6 +259,8 @@ class Solver
     double progress_estimate; // Set by 'search()'.
     bool
         remove_satisfied; // Indicates whether possibly inefficient linear scan for satisfied clauses should be performed in 'simplify'.
+    vec<unsigned int>   permDiff;  // permDiff[var] contains the current conflict number... Used to count the number of  LBD
+
     Var next_var;         // Next variable to be created.
     ClauseAllocator ca;
 
@@ -272,6 +274,7 @@ class Solver
     vec<ShrinkStackElem> analyze_stack;
     vec<Lit> analyze_toclear;
     vec<Lit> add_tmp;
+    unsigned int  MYFLAG;
 
     double max_learnts;
     double learntsize_adjust_confl;
@@ -295,7 +298,7 @@ class Solver
         CRef from = CRef_Undef); // Test if fact 'p' contradicts current state, enqueue otherwise.
     CRef propagate();            // Perform unit propagation. Returns possibly conflicting clause.
     void cancelUntil(int level); // Backtrack until a certain level.
-    void analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel); // (bt = backtrack)
+    void analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned int &lbd); // (bt = backtrack)
     void analyzeFinal(
         Lit p,
         LSet&
@@ -327,6 +330,7 @@ class Solver
         const; // Returns TRUE if a clause is a reason for some implication in the current state.
     bool satisfied(
         const Clause& c) const; // Returns TRUE if a clause is satisfied in the current state.
+    template <typename T> unsigned int computeLBD(const T & lits);
 
     // Misc:
     //

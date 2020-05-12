@@ -213,6 +213,8 @@ const lbool l_Undef((uint8_t)2);
 class Clause;
 typedef RegionAllocator<uint32_t>::Ref CRef;
 
+#define BITS_LBD 20
+#define BITS_REALSIZE 32
 class Clause
 {
     struct {
@@ -220,7 +222,8 @@ class Clause
         unsigned learnt : 1;
         unsigned has_extra : 1;
         unsigned reloced : 1;
-        unsigned size : 27;
+        unsigned lbd : BITS_LBD;
+        unsigned size : BITS_REALSIZE;  //TODO : what should be the value
     } header;
     union {
         Lit lit;
@@ -238,6 +241,7 @@ class Clause
         header.learnt = learnt;
         header.has_extra = use_extra;
         header.reloced = 0;
+        header.lbd = 0;
         header.size = ps.size();
 
         for (int i = 0; i < ps.size(); i++)
@@ -353,6 +357,15 @@ class Clause
         assert(header.has_extra);
         return data[header.size].abs;
     }
+    void setLBD(int i)
+    {
+        header.lbd=i;
+    }
+    unsigned int lbd () const
+    {
+        return header.lbd;
+    }
+
 
     Lit subsumes(const Clause& other) const;
     void strengthen(Lit p);

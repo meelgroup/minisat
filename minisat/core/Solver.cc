@@ -133,6 +133,7 @@ Solver::Solver()
       propagation_budget(-1),
       asynch_interrupt(false)
 {
+        MYFLAG = 0;
 }
 
 Solver::~Solver()
@@ -160,6 +161,7 @@ Var Solver::newVar(lbool upol, bool dvar)
     vardata.insert(v, mkVarData(CRef_Undef, 0));
     activity.insert(v, rnd_init_act ? drand(random_seed) * 0.00001 : 0);
     seen.insert(v, 0);
+    permDiff.push(0);
     polarity.insert(v, true);
     user_pol.insert(v, upol);
     decision.reserve(v);
@@ -260,6 +262,23 @@ bool Solver::satisfied(const Clause& c) const
     return false;
 }
 
+/************************************************************
+ * Compute LBD functions
+ *************************************************************/
+
+template <typename T>inline unsigned int Solver::computeLBD(const T &lits) {
+    int nblevels = 0;
+    MYFLAG++;
+    for(int i = 0; i < lits.size(); i++) {
+        int l = level(var(lits[i]));
+        if(permDiff[l] != MYFLAG) {
+            permDiff[l] = MYFLAG;
+            nblevels++;
+        }
+    }
+    return nblevels;
+}
+
 // Revert to the state at given level (keeping all assignment at 'level' but not beyond).
 //
 void Solver::cancelUntil(int level)
@@ -328,7 +347,7 @@ Lit Solver::pickBranchLit()
 |        rest of literals. There may be others from the same level though.
 |  
 |________________________________________________________________________________________________@*/
-void Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel)
+void Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned int &lbd)
 {
     int pathC = 0;
     Lit p = lit_Undef;
@@ -416,6 +435,9 @@ void Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel)
         out_learnt[1] = p;
         out_btlevel = level(var(p));
     }
+
+    // Compute LBD
+    lbd = computeLBD(out_learnt);
 
     for (int j = 0; j < analyze_toclear.size(); j++)
         seen[var(analyze_toclear[j])] = 0; // ('seen[]' is now cleared)
@@ -748,6 +770,7 @@ lbool Solver::search(int nof_conflicts)
     int backtrack_level;
     int conflictC = 0;
     vec<Lit> learnt_clause;
+    unsigned int nblevels;
     starts++;
 
     for (;;) {
@@ -760,13 +783,14 @@ lbool Solver::search(int nof_conflicts)
                 return l_False;
 
             learnt_clause.clear();
-            analyze(confl, learnt_clause, backtrack_level);
+            analyze(confl, learnt_clause, backtrack_level, nblevels);
             cancelUntil(backtrack_level);
 
             if (learnt_clause.size() == 1) {
                 uncheckedEnqueue(learnt_clause[0]);
             } else {
                 CRef cr = ca.alloc(learnt_clause, true);
+                ca[cr].setLBD(nblevels);
                 learnts.push(cr);
                 attachClause(cr);
                 claBumpActivity(ca[cr]);
