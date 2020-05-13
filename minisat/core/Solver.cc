@@ -24,6 +24,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "minisat/mtl/Alg.h"
 #include "minisat/mtl/Sort.h"
 #include "minisat/utils/System.h"
+#include "minisat/core/cl_predictors.h"
+
 
 using namespace Minisat;
 
@@ -132,6 +134,11 @@ Solver::Solver()
       conflict_budget(-1),
       propagation_budget(-1),
       asynch_interrupt(false)
+
+      //Predict system
+      , pred_conf_short("../predict/predictor_short.boost")
+      , pred_conf_long("../predict/predictor_long.boost")
+      , pred_keep_above(0.5f)
 {
         MYFLAG = 0;
 }
@@ -646,6 +653,47 @@ struct reduceDB_lt {
         return ca[x].size() > 2 && (ca[y].size() == 2 || ca[x].activity() < ca[y].activity());
     }
 };
+
+void Solver::reduceDB_ml()
+{
+    int i, j;
+
+    // TODO : i want to replace pred_keep_above with extra_lim sometime
+    // double extra_lim = cla_inc / learnts.size();
+    // -- Remove any clause below this activity
+
+    if (predictors == NULL) {
+        predictors = new ClPredictors(this);
+        predictors->load_models(pred_conf_short, pred_conf_long);
+    }
+
+    sort(learnts, reduceDB_lt(ca));
+
+    for (i = j = 0; i < learnts.size(); i++) {
+
+        const uint32_t act_ranking_top_10 = \
+            std::ceil((double)i/((double)learnts.size()/10.0))+1;
+        double act_ranking_rel = ((double)i+1)/(double)learnts.size();
+        assert(act_ranking_rel != 0);
+
+        Clause& c = ca[learnts[i]];
+        int64_t last_touched_diff = (int64_t)conflicts-(int64_t)c.stats.last_touched;
+
+        if (c.size() > 2 && !locked(c)
+            && predictors->predict_short(
+                &c
+                , conflicts
+                , last_touched_diff
+                , act_ranking_rel
+                , act_ranking_top_10) < pred_keep_above)
+            removeClause(learnts[i]);
+        else
+            learnts[j++] = learnts[i];
+    }
+    learnts.shrink(i - j);
+    checkGarbage();
+}
+
 void Solver::reduceDB()
 {
     int i, j;
@@ -793,6 +841,7 @@ lbool Solver::search(int nof_conflicts)
                 ca[cr].setLBD(nblevels);
                 learnts.push(cr);
                 attachClause(cr);
+                ca[cr].update_learnt_clause_conflict_num(conflicts);
                 claBumpActivity(ca[cr]);
                 uncheckedEnqueue(learnt_clause[0], cr);
             }
@@ -827,7 +876,8 @@ lbool Solver::search(int nof_conflicts)
 
             if (learnts.size() - nAssigns() >= max_learnts)
                 // Reduce the set of learnt clauses:
-                reduceDB();
+                // reduceDB();
+                reduceDB_ml();
 
             Lit next = lit_Undef;
             while (decisionLevel() < assumptions.size()) {

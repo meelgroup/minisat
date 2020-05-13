@@ -28,7 +28,11 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "minisat/mtl/Vec.h"
 #include "minisat/utils/Options.h"
 
+#include <string>
+
 namespace Minisat {
+
+class ClPredictors;
 
 //=================================================================================================
 // Solver -- the main class:
@@ -264,6 +268,10 @@ class Solver
     Var next_var;         // Next variable to be created.
     ClauseAllocator ca;
 
+    //#ifdef FINAL_PREDICTOR
+    ClPredictors* predictors = NULL;
+    //#endif
+
     vec<Var> released_vars;
     vec<Var> free_vars;
 
@@ -286,6 +294,11 @@ class Solver
     int64_t propagation_budget; // -1 means no budget.
     bool asynch_interrupt;
 
+    //Predictor system
+    std::string pred_conf_short;
+    std::string pred_conf_long;
+    float pred_keep_above;
+
     // Main internal methods:
     //
     void insertVarOrder(Var x); // Insert a variable in the decision order priority queue.
@@ -307,6 +320,7 @@ class Solver
     lbool search(int nof_conflicts);     // Search for a given number of conflicts.
     lbool solve_();                      // Main solve method (assumptions given in 'assumptions').
     void reduceDB();                     // Reduce the set of learnt clauses.
+    void reduceDB_ml();                  // ReduceDB based on learnt heuristics
     void removeSatisfied(vec<CRef>& cs); // Shrink 'cs' to contain only non-satisfied clauses.
     void rebuildOrderHeap();
 
