@@ -1,6 +1,27 @@
-cmake_minimum_required(VERSION 2.6 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.3 FATAL_ERROR)
+set(CMAKE_C_STANDARD 99)
+set(CMAKE_CXX_STANDARD 11)
+
+include (GenerateExportHeader)
+include (GNUInstallDirs)
+enable_language( CXX )
+
+message(STATUS "LIB directory is '${CMAKE_INSTALL_LIBDIR}'")
+message(STATUS "BIN directory is '${CMAKE_INSTALL_BINDIR}'")
 
 project(minisat)
+
+# generate JSON file of compile commands -- useful for code extension
+set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
+
+# static compilation
+option(BUILD_SHARED_LIBS "Build the shared library" ON)
+option(STATICCOMPILE "Compile to static executable" ON)
+if (STATICCOMPILE)
+    set(BUILD_SHARED_LIBS OFF)
+    set(Boost_USE_STATIC_LIBS ON)
+endif()
+
 
 #--------------------------------------------------------------------------------------------------
 # Configurable options:
@@ -29,6 +50,13 @@ set(MINISAT_SOVERSION ${MINISAT_SOMAJOR})
 find_package(ZLIB)
 include_directories(${ZLIB_INCLUDE_DIR})
 include_directories(${minisat_SOURCE_DIR})
+
+find_package(dmlc REQUIRED)
+find_package(rabit REQUIRED)
+find_package(xgboost REQUIRED)
+include_directories(${xgboost_INCLUDE_DIR})
+include_directories(${rabit_INCLUDE_DIR})
+include_directories(${dmlc_INCLUDE_DIR})
 
 #--------------------------------------------------------------------------------------------------
 # Compile flags:
@@ -65,7 +93,7 @@ endif()
 set_target_properties(minisat-lib-static PROPERTIES OUTPUT_NAME "minisat")
 set_target_properties(minisat-lib-shared
   PROPERTIES
-    OUTPUT_NAME "minisat" 
+    OUTPUT_NAME "minisat"
     VERSION ${MINISAT_VERSION}
     SOVERSION ${MINISAT_SOVERSION})
 
@@ -74,7 +102,7 @@ set_target_properties(minisat_simp       PROPERTIES OUTPUT_NAME "minisat")
 #--------------------------------------------------------------------------------------------------
 # Installation targets:
 
-install(TARGETS minisat-lib-static minisat-lib-shared minisat_core minisat_simp 
+install(TARGETS minisat-lib-static minisat-lib-shared minisat_core minisat_simp
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib)
