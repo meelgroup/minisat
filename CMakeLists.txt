@@ -9,18 +9,37 @@ enable_language( CXX )
 message(STATUS "LIB directory is '${CMAKE_INSTALL_LIBDIR}'")
 message(STATUS "BIN directory is '${CMAKE_INSTALL_BINDIR}'")
 
-project(minisat)
-
-# generate JSON file of compile commands -- useful for code extension
-set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
-
-# static compilation
-option(BUILD_SHARED_LIBS "Build the shared library" ON)
-option(STATICCOMPILE "Compile to static executable" ON)
-if (STATICCOMPILE)
-    set(BUILD_SHARED_LIBS OFF)
-    set(Boost_USE_STATIC_LIBS ON)
+if(POLICY CMP0048)
+    #policy for VERSION in cmake 3.0
+    cmake_policy(SET CMP0048 NEW)
 endif()
+
+
+if(POLICY CMP0022)
+    cmake_policy(SET CMP0022 NEW)
+endif()
+
+if(POLICY CMP0046)
+    cmake_policy(SET CMP0046 NEW)
+endif()
+
+if(POLICY CMP0026)
+    cmake_policy(SET CMP0026 NEW)
+endif()
+
+project(minisat)
+SET(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+
+# # generate JSON file of compile commands -- useful for code extension
+# set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
+#
+# # static compilation
+# option(BUILD_SHARED_LIBS "Build the shared library" ON)
+# option(STATICCOMPILE "Compile to static executable" ON)
+# if (STATICCOMPILE)
+#     set(BUILD_SHARED_LIBS OFF)
+#     set(Boost_USE_STATIC_LIBS ON)
+# endif()
 
 
 #--------------------------------------------------------------------------------------------------
@@ -28,6 +47,39 @@ endif()
 
 option(STATIC_BINARIES "Link binaries statically." ON)
 option(USE_SORELEASE   "Use SORELEASE in shared library filename." ON)
+
+option(STATIC_BINARIES "Link binaries statically." ON)
+option(USE_SORELEASE   "Use SORELEASE in shared library filename." ON)
+
+
+include(CheckCXXCompilerFlag)
+macro(add_cxx_flag_if_supported flagname)
+  check_cxx_compiler_flag("${flagname}" HAVE_FLAG_${flagname})
+
+  if(HAVE_FLAG_${flagname})
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${flagname}" )
+  endif()
+endmacro()
+
+add_cxx_flag_if_supported("-Wall")
+add_cxx_flag_if_supported("-Wextra")
+add_cxx_flag_if_supported("-Wunused")
+add_cxx_flag_if_supported("-Wsign-compare")
+if (NOT CMAKE_BUILD_TYPE STREQUAL "Release")
+    add_cxx_flag_if_supported("-fno-omit-frame-pointer")
+endif()
+add_cxx_flag_if_supported("-Wtype-limits")
+add_cxx_flag_if_supported("-Wuninitialized")
+add_cxx_flag_if_supported("-Wno-deprecated")
+add_cxx_flag_if_supported("-Wstrict-aliasing")
+add_cxx_flag_if_supported("-Wpointer-arith")
+add_cxx_flag_if_supported("-Wheader-guard")
+add_cxx_flag_if_supported("-Wpointer-arith")
+add_cxx_flag_if_supported("-Wformat-nonliteral")
+add_cxx_flag_if_supported("-Winit-self")
+add_cxx_flag_if_supported("-Wparentheses")
+add_cxx_flag_if_supported("-Wunreachable-code")
+add_cxx_flag_if_supported("-ggdb3")
 
 #--------------------------------------------------------------------------------------------------
 # Library version:
@@ -55,8 +107,15 @@ find_package(dmlc REQUIRED)
 find_package(rabit REQUIRED)
 find_package(xgboost REQUIRED)
 include_directories(${xgboost_INCLUDE_DIR})
-include_directories(${rabit_INCLUDE_DIR})
-include_directories(${dmlc_INCLUDE_DIR})
+include_directories(${rabit_INCLUDE_DIRS})
+include_directories(${dmlc_INCLUDE_DIRS})
+include_directories("/usr/local/include/")
+if (xgboost_FOUND)
+    message(STATUS "OK, XGboost found : ${xgboost_DIR}")
+    message(STATUS "XGBoost -- found version ${xgboost_VERSION_MAJOR}.${xgboost_VERSION_MINOR}")
+    message(STATUS "XGBoost -- libraries:    ${xgboost_LIBRARIES}")
+    message(STATUS "XGBoost -- include dirs: ${xgboost_INCLUDE_DIRS}")
+endif()
 
 #--------------------------------------------------------------------------------------------------
 # Compile flags:
@@ -73,14 +132,19 @@ set(MINISAT_LIB_SOURCES
     minisat/core/cl_predictors.cc
     minisat/simp/SimpSolver.cc)
 
+
 add_library(minisat-lib-static STATIC ${MINISAT_LIB_SOURCES})
 add_library(minisat-lib-shared SHARED ${MINISAT_LIB_SOURCES})
 
-target_link_libraries(minisat-lib-shared ${ZLIB_LIBRARY})
-target_link_libraries(minisat-lib-static ${ZLIB_LIBRARY})
+target_link_libraries(minisat-lib-shared ${ZLIB_LIBRARY} ${xgboost_LIBRARIES})
+target_link_libraries(minisat-lib-static ${ZLIB_LIBRARY} ${xgboost_LIBRARIES})
 
 add_executable(minisat_core minisat/core/Main.cc)
 add_executable(minisat_simp minisat/simp/Main.cc)
+
+
+# target_link_libraries(minisat_core ${xgboost_LIBRARIES})
+# target_link_libraries(minisat_simp ${xgboost_LIBRARIES})
 
 if(STATIC_BINARIES)
   target_link_libraries(minisat_core minisat-lib-static)
