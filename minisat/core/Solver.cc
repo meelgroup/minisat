@@ -354,7 +354,7 @@ Lit Solver::pickBranchLit()
 |        rest of literals. There may be others from the same level though.
 |  
 |________________________________________________________________________________________________@*/
-void Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned int &lbd)
+void Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned int &lbd, unsigned int &glue_before_minim)
 {
     int pathC = 0;
     Lit p = lit_Undef;
@@ -367,6 +367,7 @@ void Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigne
     do {
         assert(confl != CRef_Undef); // (otherwise should be UIP)
         Clause& c = ca[confl];
+        c.stats.last_touched = conflicts;  // TODO : correct?
 
         if (c.learnt())
             claBumpActivity(c);
@@ -394,6 +395,8 @@ void Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigne
 
     } while (pathC > 0);
     out_learnt[0] = ~p;
+
+    uint32_t glue_before_minim = computeLBD(out_learnt);
 
     // Simplify conflict clause:
     //
@@ -818,7 +821,7 @@ lbool Solver::search(int nof_conflicts)
     int backtrack_level;
     int conflictC = 0;
     vec<Lit> learnt_clause;
-    unsigned int nblevels;
+    unsigned int glue, glue_before_minim;
     starts++;
 
     for (;;) {
@@ -831,7 +834,7 @@ lbool Solver::search(int nof_conflicts)
                 return l_False;
 
             learnt_clause.clear();
-            analyze(confl, learnt_clause, backtrack_level, nblevels);
+            analyze(confl, learnt_clause, backtrack_level, glue, glue_before_minim);
             cancelUntil(backtrack_level);
 
             if (learnt_clause.size() == 1) {
@@ -839,6 +842,7 @@ lbool Solver::search(int nof_conflicts)
             } else {
                 CRef cr = ca.alloc(learnt_clause, true);
                 ca[cr].setLBD(nblevels);
+                ca[cr].stats.glue_before_minim = glue_before_minim;
                 learnts.push(cr);
                 attachClause(cr);
                 ca[cr].update_learnt_clause_conflict_num(conflicts);

@@ -311,7 +311,7 @@ class Solver
         CRef from = CRef_Undef); // Test if fact 'p' contradicts current state, enqueue otherwise.
     CRef propagate();            // Perform unit propagation. Returns possibly conflicting clause.
     void cancelUntil(int level); // Backtrack until a certain level.
-    void analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned int &lbd); // (bt = backtrack)
+    void analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned int &lbd, unsigned int &glue_before_minim); // (bt = backtrack)
     void analyzeFinal(
         Lit p,
         LSet&
@@ -428,6 +428,7 @@ inline void Solver::claBumpActivity(Clause& c)
             ca[learnts[i]].activity() *= 1e-20;
         cla_inc *= 1e-20;
     }
+    c.stats.activity = c.activity();
 }
 
 inline void Solver::checkGarbage(void)

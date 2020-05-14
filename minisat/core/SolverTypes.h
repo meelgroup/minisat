@@ -238,14 +238,14 @@ struct ClauseStats
     // uint32_t locked_for_data_gen:1;
     float   activity;
     uint32_t last_touched;
-    float       glue_hist_long;
-    float       glue_hist_queue;
+    float       glue_hist_long; // Not updated
+    float       glue_hist_queue; // Not updated
     // float       glue_hist;
-    float       size_hist;
-    uint32_t    glue_before_minim;
+    float       size_hist; // Not updated
+    uint32_t    glue_before_minim;  // Is the minimization same here?
     // uint32_t    num_overlap_literals;
-    float       antec_overlap_hist;
-    uint32_t    num_total_lits_antecedents;
+    float       antec_overlap_hist; // Not updated
+    uint32_t    num_total_lits_antecedents; // Not updated
     // uint32_t    rdb1_last_touched_diff;
     uint32_t    num_antecedents;
     float       branch_depth_hist_queue;
@@ -435,14 +435,16 @@ class Clause
     void setLBD(int i)
     {
         header.lbd=i;
+        stats.glue = i;
     }
     unsigned int lbd () const
     {
-        return header.lbd;
+        return stats.glue;
     }
     void update_learnt_clause_conflict_num(uint64_t conflicts)
     {
         stats.introduced_at_conflict = conflicts;
+        stats.last_touched = conflicts; //Any possible harms?
 
     }
 
