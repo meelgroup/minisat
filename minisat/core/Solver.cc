@@ -367,7 +367,9 @@ void Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigne
     do {
         assert(confl != CRef_Undef); // (otherwise should be UIP)
         Clause& c = ca[confl];
-        c.stats.last_touched = conflicts;  // TODO : correct?
+        c.stats.last_touched = conflicts;  // TODO : correct? also the two below?
+        c.stats.sum_uip1_used++;
+        c.stats.used_for_uip_creation++;
 
         if (c.learnt())
             claBumpActivity(c);
@@ -396,7 +398,7 @@ void Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigne
     } while (pathC > 0);
     out_learnt[0] = ~p;
 
-    uint32_t glue_before_minim = computeLBD(out_learnt);
+    glue_before_minim = computeLBD(out_learnt);
 
     // Simplify conflict clause:
     //
@@ -599,6 +601,8 @@ CRef Solver::propagate()
                 c[0] = c[1], c[1] = false_lit;
             assert(c[1] == false_lit);
             i++;
+            c.stats.propagations_made++; // TODO : correct?
+            c.stats.rdb1_propagations_made++;
 
             // If 0th watch is true, then clause is already satisfied.
             Lit first = c[0];
@@ -692,8 +696,12 @@ void Solver::reduceDB_ml()
             removeClause(learnts[i]);
         else
             learnts[j++] = learnts[i];
+
+        c.stats.rdb1_propagations_made = c.stats.propagations_made;
+        c.stats.reset_rdb_stats();
     }
     learnts.shrink(i - j);
+
     checkGarbage();
 }
 
@@ -841,7 +849,7 @@ lbool Solver::search(int nof_conflicts)
                 uncheckedEnqueue(learnt_clause[0]);
             } else {
                 CRef cr = ca.alloc(learnt_clause, true);
-                ca[cr].setLBD(nblevels);
+                ca[cr].setLBD(glue);
                 ca[cr].stats.glue_before_minim = glue_before_minim;
                 learnts.push(cr);
                 attachClause(cr);

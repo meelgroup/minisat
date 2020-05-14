@@ -247,8 +247,8 @@ struct ClauseStats
     float       antec_overlap_hist; // Not updated
     uint32_t    num_total_lits_antecedents; // Not updated
     // uint32_t    rdb1_last_touched_diff;
-    uint32_t    num_antecedents;
-    float       branch_depth_hist_queue;
+    uint32_t    num_antecedents; // Not updated
+    float       branch_depth_hist_queue; // Not updated
     float       num_resolutions_hist_lt;
     // uint32_t    trail_depth_hist_longer;
     // float       rdb1_act_ranking_rel = 0;
@@ -257,7 +257,7 @@ struct ClauseStats
     //for locking in for long
     // uint8_t    locked_long = 0;
 
-    uint32_t orig_glue;
+    uint32_t orig_glue;    // Not updated, probably it will always be the same
     // uint16_t dump_no = 0;
     uint32_t introduced_at_conflict = 0; ///<At what conflict number the clause  was introduced
 
