@@ -218,12 +218,12 @@ struct ClauseStats
     ClauseStats()
     {
         glue = 1000;
-        marked_clause = false;
-        ttl = 0;
-        which_red_array = 3;
-        which_red_array = 2;
-        locked_for_data_gen = 0;
-        is_decision = false;
+        // marked_clause = false;
+        // ttl = 0;
+        // which_red_array = 3;
+        // which_red_array = 2;
+        // locked_for_data_gen = 0;
+        // is_decision = false;
         //TODO it's weird, it has been tested to be better with "1"
         activity = 1;
         last_touched = 0;
@@ -231,34 +231,34 @@ struct ClauseStats
 
     //Stored data
     uint32_t glue:20;  //currently in code limited to 100'000
-    uint32_t is_decision:1;
-    uint32_t marked_clause:1;
-    uint32_t ttl:2;
-    uint32_t which_red_array:3;
-    uint32_t locked_for_data_gen:1;
+    // uint32_t is_decision:1;
+    // uint32_t marked_clause:1;
+    // uint32_t ttl:2;
+    // uint32_t which_red_array:3;
+    // uint32_t locked_for_data_gen:1;
     float   activity;
     uint32_t last_touched;
     float       glue_hist_long;
     float       glue_hist_queue;
-    float       glue_hist;
+    // float       glue_hist;
     float       size_hist;
     uint32_t    glue_before_minim;
-    uint32_t    num_overlap_literals;
+    // uint32_t    num_overlap_literals;
     float       antec_overlap_hist;
     uint32_t    num_total_lits_antecedents;
-    uint32_t    rdb1_last_touched_diff;
+    // uint32_t    rdb1_last_touched_diff;
     uint32_t    num_antecedents;
     float       branch_depth_hist_queue;
     float       num_resolutions_hist_lt;
-    uint32_t    trail_depth_hist_longer;
-    float       rdb1_act_ranking_rel = 0;
-    uint8_t     rdb1_act_ranking_top_10 = 0;
+    // uint32_t    trail_depth_hist_longer;
+    // float       rdb1_act_ranking_rel = 0;
+    // uint8_t     rdb1_act_ranking_top_10 = 0;
 
     //for locking in for long
-    uint8_t    locked_long = 0;
+    // uint8_t    locked_long = 0;
 
     uint32_t orig_glue;
-    uint16_t dump_no = 0;
+    // uint16_t dump_no = 0;
     uint32_t introduced_at_conflict = 0; ///<At what conflict number the clause  was introduced
 
     //for average and sum stats
@@ -266,23 +266,23 @@ struct ClauseStats
 
     //below resets
     uint32_t used_for_uip_creation = 0; ///N.o. times claue was used during 1st UIP generation in this RDB
-    uint32_t rdb1_used_for_uip_creation = 0; ///N.o. times claue was used during 1st UIP generation in previous RDB
+    // uint32_t rdb1_used_for_uip_creation = 0; ///N.o. times claue was used during 1st UIP generation in previous RDB
     uint32_t propagations_made = 0; ///<Number of times caused propagation
     uint32_t rdb1_propagations_made = 0; ///<Number of times caused propagation, last round
-    uint32_t sum_propagations_made = 0; ///<Number of times caused propagation
+    // uint32_t sum_propagations_made = 0; ///<Number of times caused propagation
 
-    int32_t ID = 0;
+    // int32_t ID = 0;
 
-    uint32_t conflicts_made = 0; ///<Number of times caused conflict
-    uint32_t clause_looked_at = 0; ///<Number of times the clause has been deferenced during propagation
+    // uint32_t conflicts_made = 0; ///<Number of times caused conflict
+    // uint32_t clause_looked_at = 0; ///<Number of times the clause has been deferenced during propagation
 
     void reset_rdb_stats()
     {
-        ttl = 0;
+        // ttl = 0;
         used_for_uip_creation = 0;
         propagations_made = 0;
-        clause_looked_at = 0;
-        conflicts_made = 0;
+        // clause_looked_at = 0;
+        // conflicts_made = 0;
     }
 };
 
