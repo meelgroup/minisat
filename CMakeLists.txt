@@ -70,17 +70,55 @@ find_package(ZLIB)
 include_directories(${ZLIB_INCLUDE_DIR})
 include_directories(${minisat_SOURCE_DIR})
 
-find_package(dmlc REQUIRED)
-find_package(rabit REQUIRED)
-find_package(xgboost REQUIRED)
-if (xgboost_FOUND)
-    message(STATUS "XGBoost -- found version ${xgboost_VERSION_MAJOR}.${xgboost_VERSION_MINOR}")
-endif()
-
 #--------------------------------------------------------------------------------------------------
 # Compile flags:
 
 add_definitions(-D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS)
+
+# -----------------------------------------------------------------------------
+# Add GIT version
+# -----------------------------------------------------------------------------
+find_program (GIT_EXECUTABLE git)
+if (GIT_EXECUTABLE)
+  include(GetGitRevisionDescription)
+  get_git_head_revision(GIT_REFSPEC GIT_SHA1)
+  MESSAGE(STATUS "GIT hash found: ${GIT_SHA1}")
+else()
+  set(GIT_SHA "GIT-hash-notfound")
+endif()
+
+option(FINAL_PREDICTOR "Use final predictor" ON)
+
+if (FINAL_PREDICTOR)
+    find_package(dmlc REQUIRED)
+    find_package(rabit REQUIRED)
+    find_package(xgboost REQUIRED)
+    if (xgboost_FOUND)
+        message(STATUS "XGBoost -- found version ${xgboost_VERSION_MAJOR}.${xgboost_VERSION_MINOR}")
+    endif()
+    add_definitions( -DFINAL_PREDICTOR )
+endif()
+
+option(STATS "Don't use statistics at all" OFF)
+if (STATS)
+    if (FINAL_PREDICTOR)
+        message(FATAL_ERROR "Cannot have stats and final predictor on both")
+    endif()
+    find_package (Sqlite3)
+    IF (SQLITE3_FOUND)
+        MESSAGE(STATUS "OK, Found Sqlite3!")
+        include_directories(${SQLITE3_INCLUDE_DIR})
+        add_definitions( -DUSE_SQLITE3 )
+    else ()
+        MESSAGE(STATUS "WARNING: Did not find Sqlite3, Sqlite3 support will be disabled")
+    endif ()
+    add_definitions( -DSTATS_NEEDED )
+    if (NOT SQLITE3_FOUND)
+        message(FATAL_ERROR "SQLite needed for STATS")
+    endif()
+ELSE ()
+    MESSAGE(STATUS "Not compiling detailed statistics. The system is faster without them")
+ENDIF ()
 
 #--------------------------------------------------------------------------------------------------
 # Build Targets:
@@ -90,6 +128,7 @@ set(MINISAT_LIB_SOURCES
     minisat/utils/System.cc
     minisat/core/Solver.cc
     minisat/core/cl_predictors.cc
+    minisat/core/sqlitestats.cpp
     minisat/simp/SimpSolver.cc)
 
 
