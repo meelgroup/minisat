@@ -27,6 +27,12 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 using namespace Minisat;
 
+#ifdef BIN_DRUP
+int Solver::buf_len = 0;
+unsigned char Solver::drup_buf[2 * 1024 * 1024];
+unsigned char* Solver::buf_ptr = drup_buf;
+#endif
+
 //=================================================================================================
 // Options:
 
@@ -69,6 +75,7 @@ Solver::Solver()
 
       // Parameters (user settable):
       //
+      drup_file(NULL),
       verbosity(0),
       var_decay(opt_var_decay),
       clause_decay(opt_clause_decay),
@@ -188,12 +195,35 @@ bool Solver::addClause_(vec<Lit>& ps)
     sort(ps);
     Lit p;
     int i, j;
+
+    if (drup_file) {
+        add_oc.clear();
+        for (int i = 0; i < ps.size(); i++)
+            add_oc.push(ps[i]);
+    }
+
     for (i = j = 0, p = lit_Undef; i < ps.size(); i++)
         if (value(ps[i]) == l_True || ps[i] == ~p)
             return true;
         else if (value(ps[i]) != l_False && ps[i] != p)
             ps[j++] = p = ps[i];
     ps.shrink(i - j);
+
+    if (drup_file && i != j) {
+#ifdef BIN_DRUP
+        binDRUP('a', ps, drup_file);
+        binDRUP('d', add_oc, drup_file);
+#else
+        for (int i = 0; i < ps.size(); i++)
+            fprintf(drup_file, "%i ", (var(ps[i]) + 1) * (-2 * sign(ps[i]) + 1));
+        fprintf(drup_file, "0\n");
+
+        fprintf(drup_file, "d ");
+        for (int i = 0; i < add_oc.size(); i++)
+            fprintf(drup_file, "%i ", (var(add_oc[i]) + 1) * (-2 * sign(add_oc[i]) + 1));
+        fprintf(drup_file, "0\n");
+#endif
+    }
 
     if (ps.size() == 0)
         return ok = false;
@@ -244,6 +274,21 @@ void Solver::detachClause(CRef cr, bool strict)
 void Solver::removeClause(CRef cr)
 {
     Clause& c = ca[cr];
+
+    if (drup_file) {
+        if (c.mark() != 1) {
+#ifdef BIN_DRUP
+            binDRUP('d', c, drup_file);
+#else
+            fprintf(drup_file, "d ");
+            for (int i = 0; i < c.size(); i++)
+                fprintf(drup_file, "%i ", (var(c[i]) + 1) * (-2 * sign(c[i]) + 1));
+            fprintf(drup_file, "0\n");
+#endif
+        } else
+            printf("c Bug. I don't expect this to happen.\n");
+    }
+
     detachClause(cr);
     // Don't leave pointers to free'd memory!
     if (locked(c))
@@ -773,6 +818,17 @@ lbool Solver::search(int nof_conflicts)
                 uncheckedEnqueue(learnt_clause[0], cr);
             }
 
+            if (drup_file) {
+#ifdef BIN_DRUP
+                binDRUP('a', learnt_clause, drup_file);
+#else
+                for (int i = 0; i < learnt_clause.size(); i++)
+                    fprintf(drup_file, "%i ",
+                            (var(learnt_clause[i]) + 1) * (-2 * sign(learnt_clause[i]) + 1));
+                fprintf(drup_file, "0\n");
+#endif
+            }
+
             varDecayActivity();
             claDecayActivity();
 
@@ -919,6 +975,11 @@ lbool Solver::solve_()
 
     if (verbosity >= 1)
         printf("===============================================================================\n");
+
+#ifdef BIN_DRUP
+    if (drup_file && status == l_False)
+        binDRUP_flush(drup_file);
+#endif
 
     if (status == l_True) {
         // Extend & copy model:

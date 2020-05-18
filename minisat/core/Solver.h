@@ -21,6 +21,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #ifndef Minisat_Solver_h
 #define Minisat_Solver_h
 
+#define BIN_DRUP
+
 #include "minisat/core/SolverTypes.h"
 #include "minisat/mtl/Alg.h"
 #include "minisat/mtl/Heap.h"
@@ -137,6 +139,7 @@ class Solver
 
     // Mode of operation:
     //
+    FILE* drup_file;
     int verbosity;
     double var_decay;
     double clause_decay;
@@ -272,6 +275,7 @@ class Solver
     vec<ShrinkStackElem> analyze_stack;
     vec<Lit> analyze_toclear;
     vec<Lit> add_tmp;
+    vec<Lit> add_oc;
 
     double max_learnts;
     double learntsize_adjust_confl;
@@ -338,6 +342,58 @@ class Solver
     double progressEstimate() const; // DELETE THIS ?? IT'S NOT VERY USEFUL ...
     bool withinBudget() const;
     void relocAll(ClauseAllocator& to);
+
+#ifdef BIN_DRUP
+    static int buf_len;
+    static unsigned char drup_buf[];
+    static unsigned char* buf_ptr;
+
+    static inline void byteDRUP(Lit l)
+    {
+        unsigned int u = 2 * (var(l) + 1) + sign(l);
+        do {
+            *buf_ptr++ = u & 0x7f | 0x80;
+            buf_len++;
+            u = u >> 7;
+        } while (u);
+        *(buf_ptr - 1) &= 0x7f; // End marker of this unsigned number.
+    }
+
+    template <class V>
+    static inline void binDRUP(unsigned char op, const V& c, FILE* drup_file)
+    {
+        assert(op == 'a' || op == 'd');
+        *buf_ptr++ = op;
+        buf_len++;
+        for (int i = 0; i < c.size(); i++)
+            byteDRUP(c[i]);
+        *buf_ptr++ = 0;
+        buf_len++;
+        if (buf_len > 1048576)
+            binDRUP_flush(drup_file);
+    }
+
+    static inline void binDRUP_strengthen(const Clause& c, Lit l, FILE* drup_file)
+    {
+        *buf_ptr++ = 'a';
+        buf_len++;
+        for (int i = 0; i < c.size(); i++)
+            if (c[i] != l)
+                byteDRUP(c[i]);
+        *buf_ptr++ = 0;
+        buf_len++;
+        if (buf_len > 1048576)
+            binDRUP_flush(drup_file);
+    }
+
+    static inline void binDRUP_flush(FILE* drup_file)
+    {
+        //        fwrite(drup_buf, sizeof(unsigned char), buf_len, drup_file);
+        fwrite_unlocked(drup_buf, sizeof(unsigned char), buf_len, drup_file);
+        buf_ptr = drup_buf;
+        buf_len = 0;
+    }
+#endif
 
     // Static helpers:
     //

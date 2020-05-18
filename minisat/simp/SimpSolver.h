@@ -21,17 +21,16 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #ifndef Minisat_SimpSolver_h
 #define Minisat_SimpSolver_h
 
-#include "minisat/mtl/Queue.h"
 #include "minisat/core/Solver.h"
-
+#include "minisat/mtl/Queue.h"
 
 namespace Minisat {
 
 //=================================================================================================
 
-
-class SimpSolver : public Solver {
- public:
+class SimpSolver : public Solver
+{
+   public:
     // Constructor/Destructor:
     //
     SimpSolver();

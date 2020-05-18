@@ -165,6 +165,16 @@ bool SimpSolver::addClause_(vec<Lit>& ps)
     if (!Solver::addClause_(ps))
         return false;
 
+    if (!parsing && drup_file) {
+#ifdef BIN_DRUP
+        binDRUP('a', ps, drup_file);
+#else
+        for (int i = 0; i < ps.size(); i++)
+            fprintf(drup_file, "%i ", (var(ps[i]) + 1) * (-2 * sign(ps[i]) + 1));
+        fprintf(drup_file, "0\n");
+#endif
+    }
+
     if (use_simplification && clauses.size() == nclauses + 1) {
         CRef cr = clauses.last();
         const Clause& c = ca[cr];
@@ -213,10 +223,31 @@ bool SimpSolver::strengthenClause(CRef cr, Lit l)
     // if (!find(subsumption_queue, &c))
     subsumption_queue.insert(cr);
 
+    if (drup_file) {
+#ifdef BIN_DRUP
+        binDRUP_strengthen(c, l, drup_file);
+#else
+        for (int i = 0; i < c.size(); i++)
+            if (c[i] != l)
+                fprintf(drup_file, "%i ", (var(c[i]) + 1) * (-2 * sign(c[i]) + 1));
+        fprintf(drup_file, "0\n");
+#endif
+    }
+
     if (c.size() == 2) {
         removeClause(cr);
         c.strengthen(l);
     } else {
+        if (drup_file) {
+#ifdef BIN_DRUP
+            binDRUP('d', c, drup_file);
+#else
+            fprintf(drup_file, "d ");
+            for (int i = 0; i < c.size(); i++)
+                fprintf(drup_file, "%i ", (var(c[i]) + 1) * (-2 * sign(c[i]) + 1));
+            fprintf(drup_file, "0\n");
+#endif
+        }
         detachClause(cr, true);
         c.strengthen(l);
         attachClause(cr);
