@@ -151,6 +151,7 @@ int main(int argc, char** argv)
         // voluntarily:
         sigTerm(SIGINT_interrupt);
 
+        S.parsing = false;
         S.eliminate(true);
         double simplified_time = cpuTime();
         if (S.verbosity > 0) {

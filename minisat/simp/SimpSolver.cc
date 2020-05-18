@@ -52,7 +52,8 @@ static DoubleOption opt_simp_garbage_frac(_cat, "simp-gc-frac",
 // Constructor/Destructor:
 
 SimpSolver::SimpSolver()
-    : grow(opt_grow),
+    : parsing(false),
+      grow(opt_grow),
       clause_lim(opt_clause_lim),
       subsumption_lim(opt_subsumption_lim),
       simp_garbage_frac(opt_simp_garbage_frac),
