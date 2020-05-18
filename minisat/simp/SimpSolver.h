@@ -21,17 +21,16 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #ifndef Minisat_SimpSolver_h
 #define Minisat_SimpSolver_h
 
-#include "minisat/mtl/Queue.h"
 #include "minisat/core/Solver.h"
-
+#include "minisat/mtl/Queue.h"
 
 namespace Minisat {
 
 //=================================================================================================
 
-
-class SimpSolver : public Solver {
- public:
+class SimpSolver : public Solver
+{
+   public:
     // Constructor/Destructor:
     //
     SimpSolver();
@@ -87,6 +86,7 @@ class SimpSolver : public Solver {
 
     // Mode of operation:
     //
+    bool    parsing;
     int     grow;              // Allow a variable elimination step to grow by a number of clauses (default to zero).
     int     clause_lim;        // Variables are not eliminated if it produces a resolvent with a length above this limit.
                                // -1 means no limit.
