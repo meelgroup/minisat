@@ -271,7 +271,7 @@ struct ClauseStats
     uint32_t rdb1_propagations_made = 0; ///<Number of times caused propagation, last round
     // uint32_t sum_propagations_made = 0; ///<Number of times caused propagation
 
-    // int32_t ID = 0;
+    int32_t ID = 0;
 
     // uint32_t conflicts_made = 0; ///<Number of times caused conflict
     // uint32_t clause_looked_at = 0; ///<Number of times the clause has been deferenced during propagation

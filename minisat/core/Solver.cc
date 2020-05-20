@@ -218,21 +218,7 @@ bool Solver::addClause_(vec<Lit>& ps)
             ps[j++] = p = ps[i];
     ps.shrink(i - j);
 
-    if (drup_file && i != j) {
-#ifdef BIN_DRUP
-        binDRUP('a', ps, drup_file);
-        binDRUP('d', add_oc, drup_file);
-#else
-        for (int i = 0; i < ps.size(); i++)
-            fprintf(drup_file, "%i ", (var(ps[i]) + 1) * (-2 * sign(ps[i]) + 1));
-        fprintf(drup_file, "0\n");
-
-        fprintf(drup_file, "d ");
-        for (int i = 0; i < add_oc.size(); i++)
-            fprintf(drup_file, "%i ", (var(add_oc[i]) + 1) * (-2 * sign(add_oc[i]) + 1));
-        fprintf(drup_file, "0\n");
-#endif
-    }
+    int32_t clid = 0;
 
     if (ps.size() == 0)
         return ok = false;
@@ -243,6 +229,23 @@ bool Solver::addClause_(vec<Lit>& ps)
         CRef cr = ca.alloc(ps, false);
         clauses.push(cr);
         attachClause(cr);
+        clid = ca[cr].stats.ID;
+    }
+
+    if (drup_file && i != j) {
+#ifdef BIN_DRUP
+        binDRUP('a', ps, drup_file, clid);
+        binDRUP('d', add_oc, drup_file, 0);
+#else
+        for (int i = 0; i < ps.size(); i++)
+            fprintf(drup_file, "%i ", (var(ps[i]) + 1) * (-2 * sign(ps[i]) + 1));
+        fprintf(drup_file, "0\n");
+
+        fprintf(drup_file, "d ");
+        for (int i = 0; i < add_oc.size(); i++)
+            fprintf(drup_file, "%i ", (var(add_oc[i]) + 1) * (-2 * sign(add_oc[i]) + 1));
+        fprintf(drup_file, "0\n");
+#endif
     }
 
     return true;
@@ -287,7 +290,7 @@ void Solver::removeClause(CRef cr)
     if (drup_file) {
         if (c.mark() != 1) {
 #ifdef BIN_DRUP
-            binDRUP('d', c, drup_file);
+            binDRUP('d', c, drup_file, 0);
 #else
             fprintf(drup_file, "d ");
             for (int i = 0; i < c.size(); i++)
@@ -890,6 +893,8 @@ lbool Solver::search(int nof_conflicts)
             analyze(confl, learnt_clause, backtrack_level, glue, glue_before_minim);
             cancelUntil(backtrack_level);
 
+            int32_t clid = 0;
+
             if (learnt_clause.size() == 1) {
                 uncheckedEnqueue(learnt_clause[0]);
             } else {
@@ -901,11 +906,12 @@ lbool Solver::search(int nof_conflicts)
                 ca[cr].update_learnt_clause_conflict_num(conflicts);
                 claBumpActivity(ca[cr]);
                 uncheckedEnqueue(learnt_clause[0], cr);
+                clid = ca[cr].stats.ID;
             }
 
             if (drup_file) {
 #ifdef BIN_DRUP
-                binDRUP('a', learnt_clause, drup_file);
+                binDRUP('a', learnt_clause, drup_file, clid);
 #else
                 for (int i = 0; i < learnt_clause.size(); i++)
                     fprintf(drup_file, "%i ",

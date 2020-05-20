@@ -377,14 +377,27 @@ class Solver
         *(buf_ptr - 1) &= 0x7f; // End marker of this unsigned number.
     }
 
+    static inline void byteDRUPaID(const uint64_t id)
+    {
+        for(unsigned i = 0; i < 6; i++) {
+            *buf_ptr++ = (id>>(8*i))&0xff;
+            buf_len++;
+        }
+    }
+
     template <class V>
-    static inline void binDRUP(unsigned char op, const V& c, FILE* drup_file)
+    static inline void binDRUP(unsigned char op, const V& c, FILE* drup_file, const uint64_t ID)
     {
         assert(op == 'a' || op == 'd');
         *buf_ptr++ = op;
         buf_len++;
         for (int i = 0; i < c.size(); i++)
             byteDRUP(c[i]);
+        if(op == 'a'){ // add clause ID if a clause being added
+            byteDRUPaID(ID);
+            const uint64_t nconflicts = 0;
+            byteDRUPaID(nconflicts);
+        }
         *buf_ptr++ = 0;
         buf_len++;
         if (buf_len > 1048576)

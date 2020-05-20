@@ -128,7 +128,7 @@ set(MINISAT_LIB_SOURCES
     minisat/utils/System.cc
     minisat/core/Solver.cc
     minisat/core/cl_predictors.cc
-    minisat/core/sqlitestats.cpp
+#     minisat/core/sqlitestats.cpp
     minisat/simp/SimpSolver.cc)
 
 
