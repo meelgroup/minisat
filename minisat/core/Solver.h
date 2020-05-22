@@ -287,6 +287,7 @@ class Solver
     vec<Lit> add_tmp;
     unsigned int  MYFLAG;
     vec<Lit> add_oc;
+    int64_t clauseID = 0;
 
     double max_learnts;
     double learntsize_adjust_confl;

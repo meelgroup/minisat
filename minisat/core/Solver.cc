@@ -893,7 +893,7 @@ lbool Solver::search(int nof_conflicts)
             analyze(confl, learnt_clause, backtrack_level, glue, glue_before_minim);
             cancelUntil(backtrack_level);
 
-            int64_t clid = 0;
+            clauseID++;
 
             if (learnt_clause.size() == 1) {
                 uncheckedEnqueue(learnt_clause[0]);
@@ -906,12 +906,12 @@ lbool Solver::search(int nof_conflicts)
 //                 ca[cr].update_learnt_clause_conflict_num(conflicts);
                 claBumpActivity(ca[cr]);
                 uncheckedEnqueue(learnt_clause[0], cr);
-                clid = ca[cr].stats.ID;
+//                 ca[cr].stats.ID = clauseID;
             }
 
             if (drup_file) {
 #ifdef BIN_DRUP
-                binDRUP('a', learnt_clause, drup_file, clid, conflicts);
+                binDRUP('a', learnt_clause, drup_file, clauseID, conflicts);
 #else
                 for (int i = 0; i < learnt_clause.size(); i++)
                     fprintf(drup_file, "%i ",
