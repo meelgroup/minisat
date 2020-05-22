@@ -234,8 +234,8 @@ bool Solver::addClause_(vec<Lit>& ps)
 
     if (drup_file && i != j) {
 #ifdef BIN_DRUP
-        binDRUP('a', ps, drup_file, clid);
-        binDRUP('d', add_oc, drup_file, 0);
+        binDRUP('a', ps, drup_file, clid, conflicts);
+        binDRUP('d', add_oc, drup_file, 0, 0);
 #else
         for (int i = 0; i < ps.size(); i++)
             fprintf(drup_file, "%i ", (var(ps[i]) + 1) * (-2 * sign(ps[i]) + 1));
@@ -290,7 +290,7 @@ void Solver::removeClause(CRef cr)
     if (drup_file) {
         if (c.mark() != 1) {
 #ifdef BIN_DRUP
-            binDRUP('d', c, drup_file, 0);
+            binDRUP('d', c, drup_file, 0, 0);
 #else
             fprintf(drup_file, "d ");
             for (int i = 0; i < c.size(); i++)
@@ -893,17 +893,17 @@ lbool Solver::search(int nof_conflicts)
             analyze(confl, learnt_clause, backtrack_level, glue, glue_before_minim);
             cancelUntil(backtrack_level);
 
-            int32_t clid = 0;
+            int64_t clid = 0;
 
             if (learnt_clause.size() == 1) {
                 uncheckedEnqueue(learnt_clause[0]);
             } else {
                 CRef cr = ca.alloc(learnt_clause, true);
-                ca[cr].setLBD(glue);
-                ca[cr].stats.glue_before_minim = glue_before_minim;
+//                 ca[cr].setLBD(glue);
+//                 ca[cr].stats.glue_before_minim = glue_before_minim;
                 learnts.push(cr);
                 attachClause(cr);
-                ca[cr].update_learnt_clause_conflict_num(conflicts);
+//                 ca[cr].update_learnt_clause_conflict_num(conflicts);
                 claBumpActivity(ca[cr]);
                 uncheckedEnqueue(learnt_clause[0], cr);
                 clid = ca[cr].stats.ID;
@@ -911,7 +911,7 @@ lbool Solver::search(int nof_conflicts)
 
             if (drup_file) {
 #ifdef BIN_DRUP
-                binDRUP('a', learnt_clause, drup_file, clid);
+                binDRUP('a', learnt_clause, drup_file, clid, conflicts);
 #else
                 for (int i = 0; i < learnt_clause.size(); i++)
                     fprintf(drup_file, "%i ",
@@ -950,8 +950,8 @@ lbool Solver::search(int nof_conflicts)
 
             if (learnts.size() - nAssigns() >= max_learnts)
                 // Reduce the set of learnt clauses:
-                // reduceDB();
-                reduceDB_ml();
+                reduceDB();
+//                 reduceDB_ml();
 
             Lit next = lit_Undef;
             while (decisionLevel() < assumptions.size()) {

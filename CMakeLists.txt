@@ -120,6 +120,12 @@ ELSE ()
     MESSAGE(STATUS "Not compiling detailed statistics. The system is faster without them")
 ENDIF ()
 
+
+option(BIN_DRUP "Use Binay DRUP output" ON)
+if (BIN_DRUP)
+    add_definitions( -DBIN_DRUP )
+endif()
+
 #--------------------------------------------------------------------------------------------------
 # Build Targets:
 

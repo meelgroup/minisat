@@ -21,7 +21,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #ifndef Minisat_Solver_h
 #define Minisat_Solver_h
 
-#define BIN_DRUP
+// #define BIN_DRUP
 
 #include "minisat/core/SolverTypes.h"
 #include "minisat/mtl/Alg.h"
@@ -386,20 +386,19 @@ class Solver
     }
 
     template <class V>
-    static inline void binDRUP(unsigned char op, const V& c, FILE* drup_file, const uint64_t ID)
+    static inline void binDRUP(unsigned char op, const V& c, FILE* drup_file, const uint64_t ID, int64_t conflicts)
     {
         assert(op == 'a' || op == 'd');
         *buf_ptr++ = op;
         buf_len++;
         for (int i = 0; i < c.size(); i++)
             byteDRUP(c[i]);
-        if(op == 'a'){ // add clause ID if a clause being added
-            byteDRUPaID(ID);
-            const uint64_t nconflicts = 0;
-            byteDRUPaID(nconflicts);
-        }
         *buf_ptr++ = 0;
         buf_len++;
+        if(op == 'a'){ // add clause ID if a clause being added
+            byteDRUPaID(ID);
+            byteDRUPaID(conflicts);
+        }
         if (buf_len > 1048576)
             binDRUP_flush(drup_file);
     }
@@ -413,6 +412,9 @@ class Solver
                 byteDRUP(c[i]);
         *buf_ptr++ = 0;
         buf_len++;
+        byteDRUPaID(0);
+        uint64_t nconflicts = 0;
+        byteDRUPaID(nconflicts);
         if (buf_len > 1048576)
             binDRUP_flush(drup_file);
     }

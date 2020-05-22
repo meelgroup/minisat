@@ -193,7 +193,7 @@ bool SimpSolver::addClause_(vec<Lit>& ps)
     if (!parsing && drup_file) {
         assert(ps.size() > 0);
 #ifdef BIN_DRUP
-        binDRUP('a', ps, drup_file,clid);
+        binDRUP('a', ps, drup_file,clid,conflicts);
 #else
         for (int i = 0; i < ps.size(); i++)
             fprintf(drup_file, "%i ", (var(ps[i]) + 1) * (-2 * sign(ps[i]) + 1));
@@ -246,7 +246,7 @@ bool SimpSolver::strengthenClause(CRef cr, Lit l)
     } else {
         if (drup_file) {
 #ifdef BIN_DRUP
-            binDRUP('d', c, drup_file,0);
+            binDRUP('d', c, drup_file,0, 0);
 #else
             fprintf(drup_file, "d ");
             for (int i = 0; i < c.size(); i++)
