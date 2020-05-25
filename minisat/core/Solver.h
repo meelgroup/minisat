@@ -21,6 +21,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #ifndef Minisat_Solver_h
 #define Minisat_Solver_h
 
+// #define BIN_DRUP
+
 #include "minisat/core/SolverTypes.h"
 #include "minisat/mtl/Alg.h"
 #include "minisat/mtl/Heap.h"
@@ -153,6 +155,7 @@ class Solver
 
     // Mode of operation:
     //
+    FILE* drup_file;
     int verbosity;
     double var_decay;
     double clause_decay;
@@ -297,6 +300,8 @@ class Solver
     vec<Lit> analyze_toclear;
     vec<Lit> add_tmp;
     unsigned int  MYFLAG;
+    vec<Lit> add_oc;
+    int64_t clauseID = 0;
 
     double max_learnts;
     double learntsize_adjust_confl;
@@ -370,6 +375,73 @@ class Solver
     double progressEstimate() const; // DELETE THIS ?? IT'S NOT VERY USEFUL ...
     bool withinBudget() const;
     void relocAll(ClauseAllocator& to);
+
+#ifdef BIN_DRUP
+    static int buf_len;
+    static unsigned char drup_buf[];
+    static unsigned char* buf_ptr;
+
+    static inline void byteDRUP(Lit l)
+    {
+        unsigned int u = 2 * (var(l) + 1) + sign(l);
+        do {
+            *buf_ptr++ = u & 0x7f | 0x80;
+            buf_len++;
+            u = u >> 7;
+        } while (u);
+        *(buf_ptr - 1) &= 0x7f; // End marker of this unsigned number.
+    }
+
+    static inline void byteDRUPaID(const uint64_t id)
+    {
+        for(unsigned i = 0; i < 6; i++) {
+            *buf_ptr++ = (id>>(8*i))&0xff;
+            buf_len++;
+        }
+    }
+
+    template <class V>
+    static inline void binDRUP(unsigned char op, const V& c, FILE* drup_file, const uint64_t ID, int64_t conflicts)
+    {
+        assert(op == 'a' || op == 'd');
+        *buf_ptr++ = op;
+        buf_len++;
+        for (int i = 0; i < c.size(); i++)
+            byteDRUP(c[i]);
+        *buf_ptr++ = 0;
+        buf_len++;
+        if(op == 'a'){ // add clause ID if a clause being added
+            byteDRUPaID(ID);
+            byteDRUPaID(conflicts);
+        }
+        if (buf_len > 1048576)
+            binDRUP_flush(drup_file);
+    }
+
+    static inline void binDRUP_strengthen(const Clause& c, Lit l, FILE* drup_file)
+    {
+        *buf_ptr++ = 'a';
+        buf_len++;
+        for (int i = 0; i < c.size(); i++)
+            if (c[i] != l)
+                byteDRUP(c[i]);
+        *buf_ptr++ = 0;
+        buf_len++;
+        byteDRUPaID(0);
+        uint64_t nconflicts = 0;
+        byteDRUPaID(nconflicts);
+        if (buf_len > 1048576)
+            binDRUP_flush(drup_file);
+    }
+
+    static inline void binDRUP_flush(FILE* drup_file)
+    {
+        //        fwrite(drup_buf, sizeof(unsigned char), buf_len, drup_file);
+        fwrite_unlocked(drup_buf, sizeof(unsigned char), buf_len, drup_file);
+        buf_ptr = drup_buf;
+        buf_len = 0;
+    }
+#endif
 
     // Static helpers:
     //

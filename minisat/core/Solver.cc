@@ -36,6 +36,12 @@ using std::endl;
 using std::string;
 using std::vector;
 
+#ifdef BIN_DRUP
+int Solver::buf_len = 0;
+unsigned char Solver::drup_buf[2 * 1024 * 1024];
+unsigned char* Solver::buf_ptr = drup_buf;
+#endif
+
 //=================================================================================================
 // Options:
 
@@ -78,6 +84,7 @@ Solver::Solver()
 
       // Parameters (user settable):
       //
+      drup_file(NULL),
       verbosity(0),
       var_decay(opt_var_decay),
       clause_decay(opt_clause_decay),
@@ -216,12 +223,21 @@ bool Solver::addClause_(vec<Lit>& ps)
     sort(ps);
     Lit p;
     int i, j;
+
+    if (drup_file) {
+        add_oc.clear();
+        for (int i = 0; i < ps.size(); i++)
+            add_oc.push(ps[i]);
+    }
+
     for (i = j = 0, p = lit_Undef; i < ps.size(); i++)
         if (value(ps[i]) == l_True || ps[i] == ~p)
             return true;
         else if (value(ps[i]) != l_False && ps[i] != p)
             ps[j++] = p = ps[i];
     ps.shrink(i - j);
+
+    int32_t clid = 0;
 
     if (ps.size() == 0)
         return ok = false;
@@ -232,6 +248,23 @@ bool Solver::addClause_(vec<Lit>& ps)
         CRef cr = ca.alloc(ps, false);
         clauses.push(cr);
         attachClause(cr);
+        clid = ca[cr].stats.ID;
+    }
+
+    if (drup_file && i != j) {
+#ifdef BIN_DRUP
+        binDRUP('a', ps, drup_file, clid, conflicts);
+        binDRUP('d', add_oc, drup_file, 0, 0);
+#else
+        for (int i = 0; i < ps.size(); i++)
+            fprintf(drup_file, "%i ", (var(ps[i]) + 1) * (-2 * sign(ps[i]) + 1));
+        fprintf(drup_file, "0\n");
+
+        fprintf(drup_file, "d ");
+        for (int i = 0; i < add_oc.size(); i++)
+            fprintf(drup_file, "%i ", (var(add_oc[i]) + 1) * (-2 * sign(add_oc[i]) + 1));
+        fprintf(drup_file, "0\n");
+#endif
     }
 
     return true;
@@ -272,6 +305,21 @@ void Solver::detachClause(CRef cr, bool strict)
 void Solver::removeClause(CRef cr)
 {
     Clause& c = ca[cr];
+
+    if (drup_file) {
+        if (c.mark() != 1) {
+#ifdef BIN_DRUP
+            binDRUP('d', c, drup_file, 0, 0);
+#else
+            fprintf(drup_file, "d ");
+            for (int i = 0; i < c.size(); i++)
+                fprintf(drup_file, "%i ", (var(c[i]) + 1) * (-2 * sign(c[i]) + 1));
+            fprintf(drup_file, "0\n");
+#endif
+        } else
+            printf("c Bug. I don't expect this to happen.\n");
+    }
+
     detachClause(cr);
     // Don't leave pointers to free'd memory!
     if (locked(c))
@@ -864,17 +912,31 @@ lbool Solver::search(int nof_conflicts)
             analyze(confl, learnt_clause, backtrack_level, glue, glue_before_minim);
             cancelUntil(backtrack_level);
 
+            clauseID++;
+
             if (learnt_clause.size() == 1) {
                 uncheckedEnqueue(learnt_clause[0]);
             } else {
                 CRef cr = ca.alloc(learnt_clause, true);
-                ca[cr].setLBD(glue);
-                ca[cr].stats.glue_before_minim = glue_before_minim;
+//                 ca[cr].setLBD(glue);
+//                 ca[cr].stats.glue_before_minim = glue_before_minim;
                 learnts.push(cr);
                 attachClause(cr);
-                ca[cr].update_learnt_clause_conflict_num(conflicts);
+//                 ca[cr].update_learnt_clause_conflict_num(conflicts);
                 claBumpActivity(ca[cr]);
                 uncheckedEnqueue(learnt_clause[0], cr);
+//                 ca[cr].stats.ID = clauseID;
+            }
+
+            if (drup_file) {
+#ifdef BIN_DRUP
+                binDRUP('a', learnt_clause, drup_file, clauseID, conflicts);
+#else
+                for (int i = 0; i < learnt_clause.size(); i++)
+                    fprintf(drup_file, "%i ",
+                            (var(learnt_clause[i]) + 1) * (-2 * sign(learnt_clause[i]) + 1));
+                fprintf(drup_file, "0\n");
+#endif
             }
 
             varDecayActivity();
@@ -907,8 +969,8 @@ lbool Solver::search(int nof_conflicts)
 
             if (learnts.size() - nAssigns() >= max_learnts)
                 // Reduce the set of learnt clauses:
-                // reduceDB();
-                reduceDB_ml();
+                reduceDB();
+//                 reduceDB_ml();
 
             Lit next = lit_Undef;
             while (decisionLevel() < assumptions.size()) {
@@ -1024,6 +1086,11 @@ lbool Solver::solve_()
 
     if (verbosity >= 1)
         printf("===============================================================================\n");
+
+#ifdef BIN_DRUP
+    if (drup_file && status == l_False)
+        binDRUP_flush(drup_file);
+#endif
 
     if (status == l_True) {
         // Extend & copy model:
