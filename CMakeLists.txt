@@ -128,15 +128,26 @@ set(MINISAT_LIB_SOURCES
     minisat/utils/System.cc
     minisat/core/Solver.cc
     minisat/core/cl_predictors.cc
-    minisat/core/sqlitestats.cpp
+    minisat/utils/sqlitestats.cpp
+#     ${CMAKE_CURRENT_BINARY_DIR}/sql_tablestructure.cpp
     minisat/simp/SimpSolver.cc)
 
+set(cryptoms_lib_link_libs "")
+
+if (FINAL_PREDICTOR)
+    SET(cryptoms_lib_link_libs ${cryptoms_lib_link_libs} xgboost dmlc rabit rt)
+endif()
+
+if (SQLITE3_FOUND)
+    MESSAGE(STATUS "OK, Found Sqlite3! " ${SQLITE3_LIBRARIES})
+    SET(cryptoms_lib_link_libs ${cryptoms_lib_link_libs} ${SQLITE3_LIBRARIES})
+endif ()
 
 add_library(minisat-lib-static STATIC ${MINISAT_LIB_SOURCES})
 add_library(minisat-lib-shared SHARED ${MINISAT_LIB_SOURCES})
 
-target_link_libraries(minisat-lib-shared ${ZLIB_LIBRARY} xgboost dmlc rabit rt)
-target_link_libraries(minisat-lib-static ${ZLIB_LIBRARY} xgboost dmlc rabit rt)
+target_link_libraries(minisat-lib-shared ${ZLIB_LIBRARY} xgboost dmlc rabit rt ${SQLITE3_LIBRARIES})
+target_link_libraries(minisat-lib-static ${ZLIB_LIBRARY} xgboost dmlc rabit rt ${SQLITE3_LIBRARIES})
 
 add_executable(minisat_core minisat/core/Main.cc)
 add_executable(minisat_simp minisat/simp/Main.cc)

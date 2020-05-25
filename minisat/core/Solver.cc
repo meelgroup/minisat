@@ -18,16 +18,23 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
+#include <string>
 #include <math.h>
 
 #include "minisat/core/Solver.h"
 #include "minisat/mtl/Alg.h"
 #include "minisat/mtl/Sort.h"
 #include "minisat/utils/System.h"
+#include "minisat/utils/sqlstats.h"
+#include "minisat/utils/sqlitestats.h"
 #include "minisat/core/cl_predictors.h"
 
-
 using namespace Minisat;
+using std::cout;
+using std::cerr;
+using std::endl;
+using std::string;
+using std::vector;
 
 //=================================================================================================
 // Options:
@@ -145,6 +152,18 @@ Solver::Solver()
 
 Solver::~Solver()
 {
+}
+
+// Setting up SQLite
+
+void Solver::set_sqlite(string filename) {
+    sqlStats = new SQLiteStats(filename);
+    if (!sqlStats->setup(this)) {
+        exit(-1);
+    }
+    if (verbosity >= 4) {
+        cout << "c Connected to SQLite server" << endl;
+    }
 }
 
 //=================================================================================================

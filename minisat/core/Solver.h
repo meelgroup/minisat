@@ -28,8 +28,16 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "minisat/mtl/Vec.h"
 #include "minisat/utils/Options.h"
 
-#include <string>
+// #ifdef STATS
+#include "minisat/utils/sqlstats.h"
+#include "minisat/utils/sqlitestats.h"
+// #endif
 
+#include <string>
+#include <vector>
+#include <iostream>
+
+using std::string;
 namespace Minisat {
 
 class ClPredictors;
@@ -92,6 +100,10 @@ class Solver
     void toDimacs(const char* file, Lit p);
     void toDimacs(const char* file, Lit p, Lit q);
     void toDimacs(const char* file, Lit p, Lit q, Lit r);
+
+    //SQLite Setup and Methods
+    void set_sqlite(string filename);
+
 
     // Variable mode:
     //
@@ -171,6 +183,8 @@ class Solver
     uint64_t solves, starts, decisions, rnd_decisions, propagations, conflicts;
     uint64_t dec_vars, num_clauses, num_learnts, clauses_literals, learnts_literals, max_literals,
         tot_literals;
+
+    SQLStats* sqlStats = NULL;
 
    protected:
     // Helper structures:
