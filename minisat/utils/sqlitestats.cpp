@@ -294,7 +294,7 @@ void SQLiteStats::addStartupData()
     }
 }
 
-/*
+
 void SQLiteStats::finishup(const lbool status)
 {
     std::stringstream ss;
@@ -309,7 +309,6 @@ void SQLiteStats::finishup(const lbool status)
         std::exit(-1);
     }
 }
-*/
 
 void SQLiteStats::writeQuestionMarks(
     size_t num
