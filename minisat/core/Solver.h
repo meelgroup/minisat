@@ -30,7 +30,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "minisat/mtl/Vec.h"
 #include "minisat/utils/Options.h"
 
-// #ifdef STATS
+// #ifdef STATS_MODE
 #include "minisat/utils/sqlstats.h"
 #include "minisat/utils/sqlitestats.h"
 // #endif

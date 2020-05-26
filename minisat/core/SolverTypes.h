@@ -22,6 +22,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #define Minisat_SolverTypes_h
 
 #include <assert.h>
+#include <iostream>
 
 #include "minisat/mtl/Alg.h"
 #include "minisat/mtl/Alloc.h"
@@ -295,7 +296,6 @@ class Clause
         unsigned learnt : 1;
         unsigned has_extra : 1;
         unsigned reloced : 1;
-        unsigned lbd : BITS_LBD;
         unsigned size : BITS_REALSIZE;  //TODO : what should be the value
     } header;
     union {
@@ -314,7 +314,6 @@ class Clause
         header.learnt = learnt;
         header.has_extra = use_extra;
         header.reloced = 0;
-        header.lbd = 0;
         header.size = ps.size();
 
         for (int i = 0; i < ps.size(); i++)
@@ -434,7 +433,6 @@ class Clause
     }
     void setLBD(int i)
     {
-        header.lbd=i;
         stats.glue = i;
     }
     unsigned int lbd () const
