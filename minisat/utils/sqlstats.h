@@ -67,7 +67,6 @@ public:
     virtual void dump_clause_stats(
         const Solver* solver
         , uint64_t clid
-        , uint64_t restartID
         , uint32_t orig_glue
         , uint32_t glue_before_minim
         , uint32_t backtrack_level

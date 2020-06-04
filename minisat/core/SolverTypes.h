@@ -298,6 +298,11 @@ class Clause
         unsigned lbd : BITS_LBD;
         unsigned size : BITS_REALSIZE;  //TODO : what should be the value
     } header;
+
+   public:
+    ClauseStats stats;
+
+   private :
     union {
         Lit lit;
         float act;
@@ -345,9 +350,7 @@ class Clause
         }
     }
 
-   public:
-    ClauseStats stats;
-
+public:
     void calcAbstraction()
     {
         assert(header.has_extra);

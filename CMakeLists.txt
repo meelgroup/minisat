@@ -76,6 +76,63 @@ include_directories(${minisat_SOURCE_DIR})
 add_definitions(-D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS)
 
 # -----------------------------------------------------------------------------
+# Look for python
+# -----------------------------------------------------------------------------
+if (STATICCOMPILE)
+    set(ENABLE_PYTHON_INTERFACE OFF)
+endif()
+
+option(FORCE_PYTHON2 OFF)
+option(FORCE_PYTHON3 OFF)
+
+if (FORCE_PYTHON3 AND FORCE_PYTHON2)
+    message(FATAL_ERROR "Cannot force both Python2 and Python3. Wrong options given.")
+endif()
+
+message(STATUS "In case your Python interpreter is not found, or a wrong one is found, please set it with '-DPYTHON_EXECUTABLE:FILEPATH=your path here'")
+if (NOT FORCE_PYTHON2)
+    find_package(PythonInterp 3)
+    find_package(PythonLibs 3)
+    if (PYTHONINTERP_FOUND AND PYTHONLIBS_FOUND AND PYTHON_INCLUDE_DIRS)
+        message(STATUS "Python 3 -- PYTHON_EXECUTABLE=${PYTHON_EXECUTABLE}")
+        message(STATUS "Python 3 -- PYTHON_LIBRARIES=${PYTHON_LIBRARIES}")
+        message(STATUS "Python 3 -- PYTHON_INCLUDE_DIRS=${PYTHON_INCLUDE_DIRS}")
+        message(STATUS "Python 3 -- PYTHONLIBS_VERSION_STRING=${PYTHONLIBS_VERSION_STRING}")
+    endif()
+endif()
+
+if (NOT (PYTHONINTERP_FOUND AND PYTHONLIBS_FOUND AND PYTHON_INCLUDE_DIRS) AND FORCE_PYTHON3)
+    message(FATAL_ERROR "Forced Python3 but did not find Python3")
+endif()
+
+if (NOT (PYTHONINTERP_FOUND AND PYTHONLIBS_FOUND AND PYTHON_INCLUDE_DIRS) AND NOT FORCE_PYTHON3)
+    unset(PYTHONLIBS_FOUND CACHE)
+    unset(PYTHON_LIBRARIES CACHE)
+    unset(PYTHON_INCLUDE_PATH CACHE)
+    unset(PYTHON_INCLUDE_DIRS CACHE)
+    unset(PYTHON_DEBUG_LIBRARIES CACHE)
+    unset(PYTHONLIBS_VERSION_STRING CACHE)
+
+    unset(PYTHONINTERP_FOUND CACHE)
+    unset(PYTHON_EXECUTABLE CACHE)
+    unset(PYTHON_VERSION_STRING CACHE)
+
+    message(STATUS "Python 3 not fully found or Python 2 has been forced -- trying Python 2.7")
+    find_package(PythonInterp 2.7)
+    find_package(PythonLibs 2.7)
+
+    message(STATUS "Python 2.7 -- PYTHON_EXECUTABLE=${PYTHON_EXECUTABLE}")
+    message(STATUS "Python 2.7 -- PYTHON_LIBRARIES=${PYTHON_LIBRARIES}")
+    message(STATUS "Python 2.7 -- PYTHON_INCLUDE_DIRS=${PYTHON_INCLUDE_DIRS}")
+    message(STATUS "Python 2.7 -- PYTHONLIBS_VERSION_STRING=${PYTHONLIBS_VERSION_STRING}")
+endif()
+
+if (NOT (PYTHONINTERP_FOUND AND PYTHONLIBS_FOUND AND PYTHON_INCLUDE_DIRS) AND FORCE_PYTHON2)
+    message(FATAL_ERROR "Forced Python2 but did not find Python2")
+endif()
+
+
+# -----------------------------------------------------------------------------
 # Add GIT version
 # -----------------------------------------------------------------------------
 find_program (GIT_EXECUTABLE git)
@@ -117,6 +174,21 @@ ELSE ()
 ENDIF ()
 
 
+if (SQLITE3_FOUND)
+    if (NOT PYTHON_EXECUTABLE)
+        MESSAGE(FATAL_ERROR "Unfortunately, the python interpreter is needed for statistics because of SQL text generation")
+    endif()
+
+    add_custom_command(
+        OUTPUT  ${CMAKE_CURRENT_BINARY_DIR}/sql_tablestructure.cpp
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        COMMAND ${PYTHON_EXECUTABLE} minisat/utils/xxd-alike.py cmsat_tablestructure.sql ${CMAKE_CURRENT_BINARY_DIR}/sql_tablestructure.cpp
+        DEPENDS ${CMAKE_SOURCE_DIR}/cmsat_tablestructure.sql
+    )
+    add_custom_target(tablestruct ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/sql_tablestructure.cpp)
+endif()
+
+
 option(BIN_DRUP "Use Binay DRUP output" ON)
 if (BIN_DRUP)
     add_definitions( -DBIN_DRUP )
@@ -131,7 +203,8 @@ set(MINISAT_LIB_SOURCES
     minisat/core/Solver.cc
     minisat/core/cl_predictors.cc
     minisat/utils/sqlitestats.cpp
-#     ${CMAKE_CURRENT_BINARY_DIR}/sql_tablestructure.cpp
+#     minisat/utils/sql_tablestructure.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/sql_tablestructure.cpp
     minisat/simp/SimpSolver.cc)
 
 set(cryptoms_lib_link_libs "")
@@ -153,6 +226,9 @@ target_link_libraries(minisat-lib-static ${ZLIB_LIBRARY} xgboost dmlc rabit rt $
 
 add_executable(minisat_core minisat/core/Main.cc)
 add_executable(minisat_simp minisat/simp/Main.cc)
+
+
+add_dependencies(minisat_simp tablestruct)
 
 if(STATIC_BINARIES)
   target_link_libraries(minisat_core minisat-lib-static)

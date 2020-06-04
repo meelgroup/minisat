@@ -104,7 +104,21 @@ class Solver
     void toDimacs(const char* file, Lit p, Lit q, Lit r);
 
     //SQLite Setup and Methods
+    #ifdef STATS_MODE
     void set_sqlite(string filename);
+    void dump_search_sql(const double myTime);
+    void set_clause_data(
+            Clause* cl
+            , const uint32_t glue
+            , const uint32_t glue_before_minim
+            , const uint32_t old_decision_level);
+    void dump_sql_clause_data(
+        const uint32_t orig_glue
+        , const uint32_t glue_before_minim
+        , const uint32_t old_decision_level
+        , const uint64_t clid
+        , const bool decision_cl);
+    #endif
 
 
     // Variable mode:
