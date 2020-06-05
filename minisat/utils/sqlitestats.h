@@ -87,27 +87,14 @@ private:
     void init_cl_last_in_solver_STMT();
     void initMemUsedSTMT();
     void init_clause_stats_STMT();
-    void init_var_data_picktime_STMT();
-    void init_var_data_fintime_STMT();
-    void init_dec_var_clid_STMT();
     void run_sqlite_step(sqlite3_stmt* stmt, const char* name);
 
     void writeQuestionMarks(size_t num, std::stringstream& ss);
     void initReduceDBSTMT();
 
-    sqlite3_stmt *stmtTimePassed = NULL;
-    sqlite3_stmt *stmtMemUsed = NULL;
     sqlite3_stmt *stmtReduceDB = NULL;
-    sqlite3_stmt *stmtRst = NULL;
-    sqlite3_stmt *stmtVarRst = NULL;
-    sqlite3_stmt *stmtClRst = NULL;
-    sqlite3_stmt *stmtFeat = NULL;
     sqlite3_stmt *stmt_clause_stats = NULL;
     sqlite3_stmt *stmt_delete_cl = NULL;
-    sqlite3_stmt *stmt_var_data_fintime = NULL;
-    sqlite3_stmt *stmt_var_data_picktime = NULL;
-    sqlite3_stmt *stmt_dec_var_clid = NULL;
-    sqlite3_stmt *stmt_var_dist = NULL;
 
     sqlite3 *db = NULL;
     bool setup_ok = false;

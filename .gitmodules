@@ -1,0 +1,3 @@
+[submodule "drat-trim"]
+	path = drat-trim
+	url = git@github.com:msoos/drat-trim.git
