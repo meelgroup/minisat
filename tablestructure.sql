@@ -1,27 +1,25 @@
 DROP TABLE IF EXISTS `reduceDB`;
 CREATE TABLE `reduceDB` (
-  `simplifications` int(20) NOT NULL,
   `restarts` int(20) NOT NULL,
   `conflicts` bigint(20) NOT NULL,
-  `latest_satzilla_feature_calc` int(20) NOT NULL,
-  `cur_restart_type` varchar(6) NOT NULL,
-  `runtime` float NOT NULL,
   `clauseID` int(20) NOT NULL,
   `dump_no` int(20) NOT NULL,
+
   `conflicts_made` bigint(20) NOT NULL,
   `propagations_made` bigint(20) NOT NULL,
   `sum_propagations_made` bigint(20) NOT NULL,
   `clause_looked_at` bigint(20) NOT NULL,
+
   `used_for_uip_creation` bigint(20) NOT NULL,
   `last_touched_diff` bigint(20) NOT NULL,
-  `activity_rel` float(20) NOT NULL,
+--   `activity_rel` float(20) NOT NULL,
   `locked` int(20) NOT NULL,
-  `in_xor` int(20) NOT NULL,
+
   `glue` int(20) NOT NULL,
   `size` int(20) NOT NULL,
-  `ttl` int(20) NOT NULL,
   `act_ranking_top_10` int(20) NOT NULL,
   `act_ranking` int(20) NOT NULL,
+
   `tot_cls_in_db` int(20) NOT NULL,
   `sum_uip1_used`  int(20) NOT NULL
 );

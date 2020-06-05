@@ -47,7 +47,6 @@ public:
         const Solver* solver
         , const bool locked
         , const Clause* cl
-        , const string& cur_restart_type
         , const uint32_t act_ranking_top_10
         , const uint32_t act_ranking
         , const uint32_t tot_cls_in_db
@@ -72,7 +71,6 @@ public:
     ) override;
 
     bool setup(const Solver* solver) override;
-    void finishup(lbool status) override;
     void add_tag(const std::pair<std::string, std::string>& tag) override;
 
 private:

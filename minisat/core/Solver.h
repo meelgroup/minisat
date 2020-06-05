@@ -118,6 +118,7 @@ class Solver
         , const uint32_t old_decision_level
         , const uint64_t clid
         , const bool decision_cl);
+    void dump_sql_cl_data();
     #endif
 
 

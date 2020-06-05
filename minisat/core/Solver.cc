@@ -166,6 +166,8 @@ Solver::~Solver()
 
 // Setting up SQLite
 
+#ifdef STATS_MODE
+
 void Solver::set_sqlite(string filename)
 {
     sqlStats = new SQLiteStats(filename);
@@ -197,6 +199,65 @@ void Solver::dump_sql_clause_data(
         , is_decision
     );
 }
+
+void Solver::dump_sql_cl_data() {
+    double myTime = cpuTime();
+    assert(sqlStats);
+    sqlStats->begin_transaction();
+    uint64_t added_to_db = 0;
+
+//     vector<ClOffset> all_learnt;
+//     for(uint32_t lev = 0; lev < longRedCls.size(); lev++) {
+//         auto& cc = longRedCls[lev];
+//         for(const auto& offs: cc) {
+//             Clause* cl = cl_alloc.ptr(offs);
+//             assert(!cl->getRemoved());
+//             assert(cl->red());
+//             assert(!cl->freed());
+//             all_learnt.push_back(offs);
+//         }
+//     }
+
+//     std::sort(all_learnt.begin(), all_learnt.end(), SortRedClsAct(cl_alloc));
+
+    // TODO : it is assumed that learnts is already sorted
+
+    for(int i = 0; i < learnts.size(); i++) {
+//         ClOffset offs = all_learnt[i];
+        Clause& cl = ca[learnts[i]];
+
+        //Only if selected to be dumped
+        if (cl.stats.ID == 0) {
+            continue;
+        }
+
+        const bool locked = true ; // TODO clause_locked(*cl, offs);
+        const uint32_t act_ranking_top_10 = std::ceil((double)i/((double)learnts.size()/10.0))+1;
+        //cout << "Ranking top 10: " << act_ranking_top_10 << " act: " << cl->stats.activity << endl;
+        sqlStats->reduceDB(
+            this
+            , locked
+            , &cl
+            , act_ranking_top_10
+            , i+1
+            , learnts.size()
+            //, learnt_clause.size()
+        );
+        added_to_db++;
+        cl.stats.dump_no++;
+        cl.stats.reset_rdb_stats();
+    }
+    sqlStats->end_transaction();
+
+    if (verbosity > 4) {
+        cout << "c [sql] added to DB " << added_to_db
+        << " dump-ratio: " << cldatadumpratio
+        << cpuTime()-myTime
+        << endl;
+    }
+}
+#endif
+
 
 //=================================================================================================
 // Minor methods:
@@ -799,7 +860,7 @@ void Solver::reduceDB()
 {
     int i, j;
     double extra_lim = cla_inc / learnts.size(); // Remove any clause below this activity
-
+    dump_sql_cl_data();
     sort(learnts, reduceDB_lt(ca));
     // Don't delete binary or locked clauses. From the rest, delete clauses from the first half
     // and clauses with activity smaller than 'extra_lim':

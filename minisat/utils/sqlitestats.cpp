@@ -121,19 +121,9 @@ SQLiteStats::~SQLiteStats()
         return;
 
     //Free all the prepared statements
-    del_prepared_stmt(stmtRst);
-    del_prepared_stmt(stmtVarRst);
-    del_prepared_stmt(stmtClRst);
-    del_prepared_stmt(stmtFeat);
     del_prepared_stmt(stmtReduceDB);
-    del_prepared_stmt(stmtTimePassed);
-    del_prepared_stmt(stmtMemUsed);
     del_prepared_stmt(stmt_clause_stats);
     del_prepared_stmt(stmt_delete_cl);
-    del_prepared_stmt(stmt_var_data_picktime);
-    del_prepared_stmt(stmt_var_data_fintime);
-    del_prepared_stmt(stmt_dec_var_clid);
-    del_prepared_stmt(stmt_var_dist);
 
     //Close clonnection
     sqlite3_close(db);
@@ -265,37 +255,6 @@ void SQLiteStats::add_tag(const std::pair<string, string>& tag)
     }
 }
 
-void SQLiteStats::addStartupData()
-{
-    std::stringstream ss;
-    ss
-    << "INSERT INTO `startup` (`startTime`) VALUES ("
-    << "datetime('now')"
-    << ");";
-
-    if (sqlite3_exec(db, ss.str().c_str(), NULL, NULL, NULL)) {
-        cerr << "ERROR Couldn't insert into table 'startup' : "
-        << sqlite3_errmsg(db) << endl;
-
-        std::exit(-1);
-    }
-}
-
-void SQLiteStats::finishup(const lbool status)
-{
-    std::stringstream ss;
-    // TODO : this data should be added
-//     ss
-//     << "INSERT INTO `finishup` (`endTime`, `status`) VALUES ("
-//     << "datetime('now') , "
-//     << "'" << status << "'"
-//     << ");";
-
-    if (sqlite3_exec(db, ss.str().c_str(), NULL, NULL, NULL)) {
-        cerr << "ERROR Couldn't insert into table 'finishup'" << endl;
-        std::exit(-1);
-    }
-}
 
 void SQLiteStats::writeQuestionMarks(
     size_t num
@@ -378,7 +337,6 @@ void SQLiteStats::reduceDB(
     const Solver* solver
     , const bool locked
     , const Clause* cl
-    , const string& cur_restart_type
     , const uint32_t act_ranking_top_10
     , const uint32_t act_ranking
     , const uint32_t tot_cls_in_db
@@ -386,27 +344,27 @@ void SQLiteStats::reduceDB(
     assert(cl->stats.dump_no != std::numeric_limits<uint16_t>::max());
 
     int bindAt = 1;
+    sqlite3_bind_int64(stmtReduceDB, bindAt++, solver->starts);
     sqlite3_bind_int64(stmtReduceDB, bindAt++, solver->conflicts);
-    sqlite3_bind_text(stmtReduceDB, bindAt++, cur_restart_type.c_str(), -1, NULL);
-    sqlite3_bind_double(stmtReduceDB, bindAt++, cpuTime());
-
     //data
     sqlite3_bind_int64(stmtReduceDB, bindAt++, cl->stats.ID);
     sqlite3_bind_int64(stmtReduceDB, bindAt++, cl->stats.dump_no);
+
     sqlite3_bind_int64(stmtReduceDB, bindAt++, cl->stats.conflicts_made);
     sqlite3_bind_int64(stmtReduceDB, bindAt++, cl->stats.propagations_made);
     sqlite3_bind_int64(stmtReduceDB, bindAt++, cl->stats.sum_propagations_made);
     sqlite3_bind_int64(stmtReduceDB, bindAt++, cl->stats.clause_looked_at);
-    sqlite3_bind_int64(stmtReduceDB, bindAt++, cl->stats.used_for_uip_creation);
 
+    sqlite3_bind_int64(stmtReduceDB, bindAt++, cl->stats.used_for_uip_creation);
     int64_t last_touched_diff = solver->conflicts - cl->stats.last_touched;
     sqlite3_bind_int64(stmtReduceDB, bindAt++, last_touched_diff);
-
     sqlite3_bind_int(stmtReduceDB, bindAt++, locked);
+
     sqlite3_bind_int(stmtReduceDB, bindAt++, cl->stats.glue);
     sqlite3_bind_int(stmtReduceDB, bindAt++, cl->size());
     sqlite3_bind_int(stmtReduceDB, bindAt++, act_ranking_top_10);
     sqlite3_bind_int(stmtReduceDB, bindAt++, act_ranking);
+
     sqlite3_bind_int(stmtReduceDB, bindAt++, tot_cls_in_db);
     sqlite3_bind_int(stmtReduceDB, bindAt++, cl->stats.sum_uip1_used);
 

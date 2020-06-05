@@ -52,7 +52,6 @@ public:
         const Solver* solver
         , const bool locked
         , const Clause* cl
-        , const string& cur_restart_type
         , const uint32_t act_ranking_top_10
         , const uint32_t act_ranking
         , const uint32_t tot_cls_in_db
@@ -78,7 +77,6 @@ public:
     ) = 0;
 
     virtual bool setup(const Solver* solver) = 0;
-    virtual void finishup(lbool status) = 0;
     virtual void add_tag(const std::pair<std::string, std::string>& tag) = 0;
 };
 
