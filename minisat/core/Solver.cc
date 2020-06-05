@@ -804,7 +804,7 @@ void Solver::reduceDB()
     // and clauses with activity smaller than 'extra_lim':
     for (i = j = 0; i < learnts.size(); i++) {
         Clause& c = ca[learnts[i]];
-        if (c.size() > 2 && !locked(c) && (i < learnts.size() / 2 || c.activity() < extra_lim))
+        if (c.size() > 2 && !locked(c) && !c.stats.locked_for_data_gen && (i < learnts.size() / 2 || c.activity() < extra_lim))
             removeClause(learnts[i]);
         else
             learnts[j++] = learnts[i];
@@ -927,6 +927,8 @@ lbool Solver::search(int nof_conflicts)
             // CONFLICT
             conflicts++;
             conflictC++;
+            bool to_dump = false;
+            double myrnd = drand(random_seed);
             if (decisionLevel() == 0)
                 return l_False;
 
@@ -934,7 +936,6 @@ lbool Solver::search(int nof_conflicts)
             analyze(confl, learnt_clause, backtrack_level, glue, glue_before_minim);
             cancelUntil(backtrack_level);
 
-            clauseID++;
 
             if (learnt_clause.size() == 1) {
                 uncheckedEnqueue(learnt_clause[0]);
@@ -948,6 +949,20 @@ lbool Solver::search(int nof_conflicts)
                 claBumpActivity(ca[cr]);
                 uncheckedEnqueue(learnt_clause[0], cr);
                 ca[cr].stats.ID = clauseID;
+                            if (myrnd <= cldatadumpratio) {
+                to_dump = true;
+                clauseID++;
+                ca[cr].stats.locked_for_data_gen = true;
+                if (sqlStats) {
+                        dump_sql_clause_data(
+                        glue
+                        , glue_before_minim
+                        , decisionLevel()
+                        , clauseID
+                        , true
+                        );
+                }
+            }
             }
 
             if (drup_file) {
@@ -960,13 +975,8 @@ lbool Solver::search(int nof_conflicts)
                 fprintf(drup_file, "0\n");
 #endif
             }
-            dump_sql_clause_data(
-            glue
-            , glue_before_minim
-            , 0
-            , clauseID
-            , true
-            );
+
+
             varDecayActivity();
             claDecayActivity();
 

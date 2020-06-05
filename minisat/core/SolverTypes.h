@@ -223,7 +223,7 @@ struct ClauseStats
         // ttl = 0;
         // which_red_array = 3;
         // which_red_array = 2;
-        // locked_for_data_gen = 0;
+        locked_for_data_gen = 0;
         // is_decision = false;
         //TODO it's weird, it has been tested to be better with "1"
         activity = 1;
@@ -236,7 +236,7 @@ struct ClauseStats
     // uint32_t marked_clause:1;
     // uint32_t ttl:2;
     // uint32_t which_red_array:3;
-    // uint32_t locked_for_data_gen:1;
+    uint32_t locked_for_data_gen:1;
     float   activity;
     uint32_t last_touched;
     float       glue_hist_long; // Not updated
@@ -256,7 +256,7 @@ struct ClauseStats
     // uint8_t     rdb1_act_ranking_top_10 = 0;
 
     //for locking in for long
-    // uint8_t    locked_long = 0;
+    uint8_t    locked_long = 0;
 
     uint32_t orig_glue;    // Not updated, probably it will always be the same
     uint16_t dump_no = 0;

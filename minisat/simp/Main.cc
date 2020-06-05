@@ -106,7 +106,7 @@ int main(int argc, char** argv)
         string s(sqlite_filename);
         S.sqlite_filename = s;
         S.set_sqlite(S.sqlite_filename);
-
+        S.cldatadumpratio = opt_dump_ratio;
 #endif
 
         if (drup || strlen(drup_file)) {

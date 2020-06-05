@@ -203,6 +203,7 @@ class Solver
 
     SQLStats* sqlStats = NULL;
     string sqlite_filename = "";
+    double cldatadumpratio;
 
    protected:
     // Helper structures:
