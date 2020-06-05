@@ -23,6 +23,6 @@ THE SOFTWARE.
 
 #ifndef __SQL_TABLESTRUCTURE_H__
 #define __SQL_TABLESTRUCTURE_H__
-extern char cmsat_tablestructure_sql[];
-extern unsigned int cmsat_tablestructure_sql_len;
+extern char tablestructure_sql[];
+extern unsigned int tablestructure_sql_len;
 #endif

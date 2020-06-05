@@ -147,7 +147,7 @@ bool SQLiteStats::setup(const Solver* solver)
     }
 
     //TODO check if data is in any table
-    if (sqlite3_exec(db, cmsat_tablestructure_sql, NULL, NULL, NULL)) {
+    if (sqlite3_exec(db, tablestructure_sql, NULL, NULL, NULL)) {
         cerr << "ERROR: Couln't create table structure for SQLite: "
         << sqlite3_errmsg(db)
         << endl;

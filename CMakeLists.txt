@@ -9,15 +9,31 @@ enable_language( CXX )
 message(STATUS "LIB directory is '${CMAKE_INSTALL_LIBDIR}'")
 message(STATUS "BIN directory is '${CMAKE_INSTALL_BINDIR}'")
 
+if(POLICY CMP0054)
+    #Something is needed to be done here
+    cmake_policy(SET CMP0054 NEW)
+endif()
+
+if(POLICY CMP0048)
+    #policy for VERSION in cmake 3.0
+    cmake_policy(SET CMP0048 NEW)
+endif()
 
 project(minisat)
 SET(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
-#--------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Configurable options:
+#------------------------------------------------------------------------------
 
 option(STATIC_BINARIES "Link binaries statically." ON)
 option(USE_SORELEASE   "Use SORELEASE in shared library filename." ON)
+
+option(BIN_DRUP "Use Binay DRUP output" ON)
+if (BIN_DRUP)
+    add_definitions( -DBIN_DRUP )
+endif()
+
 
 include(CheckCXXCompilerFlag)
 macro(add_cxx_flag_if_supported flagname)
@@ -48,8 +64,9 @@ add_cxx_flag_if_supported("-Wparentheses")
 add_cxx_flag_if_supported("-Wunreachable-code")
 add_cxx_flag_if_supported("-ggdb3")
 
-#--------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Library version:
+#------------------------------------------------------------------------------
 
 set(MINISAT_SOMAJOR   2)
 set(MINISAT_SOMINOR   1)
@@ -63,16 +80,16 @@ else()
 endif()
 set(MINISAT_SOVERSION ${MINISAT_SOMAJOR})
 
-#--------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Dependencies:
-
+#------------------------------------------------------------------------------
 find_package(ZLIB)
 include_directories(${ZLIB_INCLUDE_DIR})
 include_directories(${minisat_SOURCE_DIR})
 
-#--------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Compile flags:
-
+#------------------------------------------------------------------------------
 add_definitions(-D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS)
 
 # -----------------------------------------------------------------------------
@@ -144,6 +161,12 @@ else()
   set(GIT_SHA "GIT-hash-notfound")
 endif()
 
+# -----------------------------------------------------------------------------
+# Different modes for data generation and prediction
+# -----------------------------------------------------------------------------
+
+set(lib_link_libs "")
+
 option(PREDICT_MODE "Use final predictor" OFF)
 
 if (PREDICT_MODE)
@@ -154,18 +177,20 @@ if (PREDICT_MODE)
         message(STATUS "XGBoost -- found version ${xgboost_VERSION_MAJOR}.${xgboost_VERSION_MINOR}")
     endif()
     add_definitions( -DPREDICT_MODE )
+    SET(lib_link_libs ${lib_link_libs} xgboost dmlc rabit rt)
 endif()
 
 option(STATS_MODE "Don't use SQL at all" OFF)
 if (STATS_MODE)
-    if (PREDICT_MODE)
-        message(FATAL_ERROR "Cannot have stats and final predictor on both")
-    endif()
+#     if (PREDICT_MODE)
+#         message(FATAL_ERROR "Cannot have stats and final predictor on both")
+#     endif()
     find_package (Sqlite3)
     IF (SQLITE3_FOUND)
         MESSAGE(STATUS "OK, Found Sqlite3!")
         include_directories(${SQLITE3_INCLUDE_DIR})
         add_definitions( -DSTATS_MODE )
+        SET(lib_link_libs ${lib_link_libs} ${SQLITE3_LIBRARIES})
     else ()
         message(FATAL_ERROR "Did not find Sqlite3! SQLite needed for STATS_MODE")
     endif()
@@ -182,47 +207,31 @@ if (SQLITE3_FOUND)
     add_custom_command(
         OUTPUT  ${CMAKE_CURRENT_BINARY_DIR}/sql_tablestructure.cpp
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-        COMMAND ${PYTHON_EXECUTABLE} minisat/utils/xxd-alike.py cmsat_tablestructure.sql ${CMAKE_CURRENT_BINARY_DIR}/sql_tablestructure.cpp
-        DEPENDS ${CMAKE_SOURCE_DIR}/cmsat_tablestructure.sql
+        COMMAND ${PYTHON_EXECUTABLE} minisat/utils/xxd-alike.py tablestructure.sql ${CMAKE_CURRENT_BINARY_DIR}/sql_tablestructure.cpp
+        DEPENDS ${CMAKE_SOURCE_DIR}/tablestructure.sql
     )
     add_custom_target(tablestruct ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/sql_tablestructure.cpp)
 endif()
 
-
-option(BIN_DRUP "Use Binay DRUP output" ON)
-if (BIN_DRUP)
-    add_definitions( -DBIN_DRUP )
-endif()
-
-#--------------------------------------------------------------------------------------------------
-# Build Targets:
-
+#------------------------------------------------------------------------------
+# Compiling
+#------------------------------------------------------------------------------
 set(MINISAT_LIB_SOURCES
     minisat/utils/Options.cc
     minisat/utils/System.cc
     minisat/core/Solver.cc
     minisat/core/cl_predictors.cc
     minisat/utils/sqlitestats.cpp
-#     minisat/utils/sql_tablestructure.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/sql_tablestructure.cpp
     minisat/simp/SimpSolver.cc)
 
-set(cryptoms_lib_link_libs "")
 
-if (FINAL_PREDICTOR)
-    SET(cryptoms_lib_link_libs ${cryptoms_lib_link_libs} xgboost dmlc rabit rt)
-endif()
-
-if (SQLITE3_FOUND)
-    MESSAGE(STATUS "OK, Found Sqlite3! " ${SQLITE3_LIBRARIES})
-    SET(cryptoms_lib_link_libs ${cryptoms_lib_link_libs} ${SQLITE3_LIBRARIES})
-endif ()
 
 add_library(minisat-lib-static STATIC ${MINISAT_LIB_SOURCES})
 add_library(minisat-lib-shared SHARED ${MINISAT_LIB_SOURCES})
 
-target_link_libraries(minisat-lib-shared ${ZLIB_LIBRARY} xgboost dmlc rabit rt ${SQLITE3_LIBRARIES})
-target_link_libraries(minisat-lib-static ${ZLIB_LIBRARY} xgboost dmlc rabit rt ${SQLITE3_LIBRARIES})
+target_link_libraries(minisat-lib-shared ${ZLIB_LIBRARY} ${lib_link_libs})
+target_link_libraries(minisat-lib-static ${ZLIB_LIBRARY} ${lib_link_libs})
 
 add_executable(minisat_core minisat/core/Main.cc)
 add_executable(minisat_simp minisat/simp/Main.cc)
@@ -247,9 +256,9 @@ set_target_properties(minisat-lib-shared
 
 set_target_properties(minisat_simp       PROPERTIES OUTPUT_NAME "minisat")
 
-#--------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # Installation targets:
-
+#------------------------------------------------------------------------------
 install(TARGETS minisat-lib-static minisat-lib-shared minisat_core minisat_simp
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION lib
