@@ -84,8 +84,8 @@ int main(int argc, char** argv)
         StringOption drup_file("MAIN", "drup-file", "DRUP UNSAT proof ouput file.", "");
         StringOption sqlite_filename("SqLite", "sqlitedb", "Name where to put the SQLite database.");
         DoubleOption opt_dump_ratio("SqLite", "cldatadumpratio",
-                                   "Only dump this ratio of clauses' data, randomly selected.", 0.2,
-                                   DoubleRange(0, false, 1, true));
+                                   "Only dump this ratio of clauses' data, randomly selected.", 0.0,
+                                   DoubleRange(0, true, 1, true));
         parseOptions(argc, argv, true);
 
         SimpSolver S;

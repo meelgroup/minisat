@@ -155,20 +155,9 @@ bool SQLiteStats::setup(const Solver* solver)
     }
 
     add_solverrun(solver);
-    addStartupData();
-    init("timepassed", &stmtTimePassed);
-    init("memused", &stmtMemUsed);
-    init("satzilla_features", &stmtFeat);
     init("clause_stats", &stmt_clause_stats);
-    init("restart", &stmtRst);
-    init("restart_dat_for_var", &stmtVarRst);
-    init("restart_dat_for_cl", &stmtClRst);
     init("reduceDB", &stmtReduceDB);
-    init("var_data_fintime", &stmt_var_data_fintime);
-    init("var_data_picktime", &stmt_var_data_picktime);
-    init("dec_var_clid", &stmt_dec_var_clid);
     init("cl_last_in_solver", &stmt_delete_cl);
-    init("var_dist", &stmt_var_dist);
 
     return true;
 }

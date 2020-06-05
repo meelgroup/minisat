@@ -128,7 +128,8 @@ Solver::Solver()
       clauses_literals(0),
       learnts_literals(0),
       max_literals(0),
-      tot_literals(0)
+      tot_literals(0),
+      num_removed_clauses(0)
 
       ,
       watches(WatcherDeleted(ca)),
@@ -804,9 +805,10 @@ void Solver::reduceDB()
     // and clauses with activity smaller than 'extra_lim':
     for (i = j = 0; i < learnts.size(); i++) {
         Clause& c = ca[learnts[i]];
-        if (c.size() > 2 && !locked(c) && !c.stats.locked_for_data_gen && (i < learnts.size() / 2 || c.activity() < extra_lim))
+        if (c.size() > 2 && !locked(c) && !c.stats.locked_for_data_gen && (i < learnts.size() / 2 || c.activity() < extra_lim)){
             removeClause(learnts[i]);
-        else
+            num_removed_clauses++;
+        } else
             learnts[j++] = learnts[i];
     }
     learnts.shrink(i - j);
@@ -1258,6 +1260,8 @@ void Solver::printStats() const
            propagations / cpu_time);
     printf("conflict literals     : %-12" PRIu64 "   (%4.2f %% deleted)\n", tot_literals,
            (max_literals - tot_literals) * 100 / (double)max_literals);
+    printf("ReduceDb deleted cls  : %-12" PRIu64 "   (%4.2f %% all)\n", num_removed_clauses,
+           (num_removed_clauses) * 100 / (double)conflicts);
     if (mem_used != 0)
         printf("Memory used           : %.2f MB\n", mem_used);
     printf("CPU time              : %g s\n", cpu_time);
