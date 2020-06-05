@@ -18,20 +18,21 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
 
-#include <string>
 #include <math.h>
+#include <string>
 
 #include "minisat/core/Solver.h"
+#include "minisat/core/cl_predictors.h"
 #include "minisat/mtl/Alg.h"
 #include "minisat/mtl/Sort.h"
 #include "minisat/utils/System.h"
-#include "minisat/utils/sqlstats.h"
 #include "minisat/utils/sqlitestats.h"
-#include "minisat/core/cl_predictors.h"
+#include "minisat/utils/sqlstats.h"
+#include <assert.h>
 
 using namespace Minisat;
-using std::cout;
 using std::cerr;
+using std::cout;
 using std::endl;
 using std::string;
 using std::vector;
@@ -75,6 +76,12 @@ static DoubleOption opt_garbage_frac(
     DoubleRange(0, false, HUGE_VAL, false));
 static IntOption opt_min_learnts_lim(_cat, "min-learnts", "Minimum learnt clause limit", 0,
                                      IntRange(0, INT32_MAX));
+
+static const char* _cats = "SqLite";
+static StringOption sqlite_filename(_cats, "sqlitedb", "Where to put the SQLite database.");
+static DoubleOption opt_dump_ratio(_cats, "cldatadumpratio",
+                                   "Only dump this ratio of clauses' data, randomly selected.", 0.2,
+                                   DoubleRange(0, false, 1, true));
 
 //=================================================================================================
 // Constructor/Destructor:
@@ -150,11 +157,12 @@ Solver::Solver()
       asynch_interrupt(false)
 
       //Predict system
-      , pred_conf_short("../predict/predictor_short.boost")
-      , pred_conf_long("../predict/predictor_long.boost")
-      , pred_keep_above(0.5f)
+      ,
+      pred_conf_short("../predict/predictor_short.boost"),
+      pred_conf_long("../predict/predictor_long.boost"),
+      pred_keep_above(0.5f)
 {
-        MYFLAG = 0;
+    MYFLAG = 0;
 }
 
 Solver::~Solver()
@@ -163,7 +171,8 @@ Solver::~Solver()
 
 // Setting up SQLite
 
-void Solver::set_sqlite(string filename) {
+void Solver::set_sqlite(string filename)
+{
     sqlStats = new SQLiteStats(filename);
     if (!sqlStats->setup(this)) {
         exit(-1);
@@ -171,6 +180,27 @@ void Solver::set_sqlite(string filename) {
     if (verbosity >= 4) {
         cout << "c Connected to SQLite server" << endl;
     }
+}
+
+void Solver::dump_sql_clause_data(
+    const uint32_t orig_glue
+    , const uint32_t glue_before_minim
+    , const uint32_t old_decision_level
+    , const uint64_t clid
+    , const bool is_decision
+) {
+    sqlStats->dump_clause_stats(
+        this
+        , clid
+        , orig_glue
+        , glue_before_minim
+        , decisionLevel()
+        , 0
+        , old_decision_level
+        , trail.size()
+        , 0
+        , is_decision
+    );
 }
 
 //=================================================================================================
@@ -340,12 +370,14 @@ bool Solver::satisfied(const Clause& c) const
  * Compute LBD functions
  *************************************************************/
 
-template <typename T>inline unsigned int Solver::computeLBD(const T &lits) {
+template <typename T>
+inline unsigned int Solver::computeLBD(const T& lits)
+{
     int nblevels = 0;
     MYFLAG++;
-    for(int i = 0; i < lits.size(); i++) {
+    for (int i = 0; i < lits.size(); i++) {
         int l = level(var(lits[i]));
-        if(permDiff[l] != MYFLAG) {
+        if (permDiff[l] != MYFLAG) {
             permDiff[l] = MYFLAG;
             nblevels++;
         }
@@ -421,7 +453,8 @@ Lit Solver::pickBranchLit()
 |        rest of literals. There may be others from the same level though.
 |  
 |________________________________________________________________________________________________@*/
-void Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned int &lbd, unsigned int &glue_before_minim)
+void Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigned int& lbd,
+                     unsigned int& glue_before_minim)
 {
     int pathC = 0;
     Lit p = lit_Undef;
@@ -434,7 +467,7 @@ void Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigne
     do {
         assert(confl != CRef_Undef); // (otherwise should be UIP)
         Clause& c = ca[confl];
-        c.stats.last_touched = conflicts;  // TODO : correct? also the two below?
+        c.stats.last_touched = conflicts; // TODO : correct? also the two below?
         c.stats.sum_uip1_used++;
         c.stats.used_for_uip_creation++;
 
@@ -744,22 +777,17 @@ void Solver::reduceDB_ml()
     sort(learnts, reduceDB_lt(ca));
 
     for (i = j = 0; i < learnts.size(); i++) {
-
-        const uint32_t act_ranking_top_10 = \
-            std::ceil((double)i/((double)learnts.size()/10.0))+1;
-        double act_ranking_rel = ((double)i+1)/(double)learnts.size();
+        const uint32_t act_ranking_top_10 =
+            std::ceil((double)i / ((double)learnts.size() / 10.0)) + 1;
+        double act_ranking_rel = ((double)i + 1) / (double)learnts.size();
         assert(act_ranking_rel != 0);
 
         Clause& c = ca[learnts[i]];
-        int64_t last_touched_diff = (int64_t)conflicts-(int64_t)c.stats.last_touched;
+        int64_t last_touched_diff = (int64_t)conflicts - (int64_t)c.stats.last_touched;
 
-        if (c.size() > 2 && !locked(c)
-            && predictors->predict_short(
-                &c
-                , conflicts
-                , last_touched_diff
-                , act_ranking_rel
-                , act_ranking_top_10) < pred_keep_above)
+        if (c.size() > 2 && !locked(c) &&
+            predictors->predict_short(&c, conflicts, last_touched_diff, act_ranking_rel,
+                                      act_ranking_top_10) < pred_keep_above)
             removeClause(learnts[i]);
         else
             learnts[j++] = learnts[i];
@@ -918,14 +946,14 @@ lbool Solver::search(int nof_conflicts)
                 uncheckedEnqueue(learnt_clause[0]);
             } else {
                 CRef cr = ca.alloc(learnt_clause, true);
-//                 ca[cr].setLBD(glue);
-//                 ca[cr].stats.glue_before_minim = glue_before_minim;
+                ca[cr].setLBD(glue);
+                ca[cr].stats.glue_before_minim = glue_before_minim;
                 learnts.push(cr);
                 attachClause(cr);
-//                 ca[cr].update_learnt_clause_conflict_num(conflicts);
+                ca[cr].update_learnt_clause_conflict_num(conflicts);
                 claBumpActivity(ca[cr]);
                 uncheckedEnqueue(learnt_clause[0], cr);
-//                 ca[cr].stats.ID = clauseID;
+                ca[cr].stats.ID = clauseID;
             }
 
             if (drup_file) {
@@ -938,7 +966,13 @@ lbool Solver::search(int nof_conflicts)
                 fprintf(drup_file, "0\n");
 #endif
             }
-
+            dump_sql_clause_data(
+            glue
+            , glue_before_minim
+            , 0
+            , clauseID
+            , true
+            );
             varDecayActivity();
             claDecayActivity();
 
@@ -970,7 +1004,7 @@ lbool Solver::search(int nof_conflicts)
             if (learnts.size() - nAssigns() >= max_learnts)
                 // Reduce the set of learnt clauses:
                 reduceDB();
-//                 reduceDB_ml();
+            //                 reduceDB_ml();
 
             Lit next = lit_Undef;
             while (decisionLevel() < assumptions.size()) {
@@ -1065,6 +1099,16 @@ lbool Solver::solve_()
     learntsize_adjust_confl = learntsize_adjust_start_confl;
     learntsize_adjust_cnt = (int)learntsize_adjust_confl;
     lbool status = l_Undef;
+
+    #ifdef STATS_MODE
+    if(sqlite_filename == NULL){
+        printf("In Stat Mode, you must provide SQLite filename");
+    }
+    assert(sqlite_filename);
+    string s(sqlite_filename);
+    set_sqlite(s);
+
+    #endif
 
     if (verbosity >= 1) {
         printf("============================[ Search Statistics ]==============================\n");

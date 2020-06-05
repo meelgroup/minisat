@@ -76,6 +76,63 @@ include_directories(${minisat_SOURCE_DIR})
 add_definitions(-D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS)
 
 # -----------------------------------------------------------------------------
+# Look for python
+# -----------------------------------------------------------------------------
+if (STATICCOMPILE)
+    set(ENABLE_PYTHON_INTERFACE OFF)
+endif()
+
+option(FORCE_PYTHON2 OFF)
+option(FORCE_PYTHON3 OFF)
+
+if (FORCE_PYTHON3 AND FORCE_PYTHON2)
+    message(FATAL_ERROR "Cannot force both Python2 and Python3. Wrong options given.")
+endif()
+
+message(STATUS "In case your Python interpreter is not found, or a wrong one is found, please set it with '-DPYTHON_EXECUTABLE:FILEPATH=your path here'")
+if (NOT FORCE_PYTHON2)
+    find_package(PythonInterp 3)
+    find_package(PythonLibs 3)
+    if (PYTHONINTERP_FOUND AND PYTHONLIBS_FOUND AND PYTHON_INCLUDE_DIRS)
+        message(STATUS "Python 3 -- PYTHON_EXECUTABLE=${PYTHON_EXECUTABLE}")
+        message(STATUS "Python 3 -- PYTHON_LIBRARIES=${PYTHON_LIBRARIES}")
+        message(STATUS "Python 3 -- PYTHON_INCLUDE_DIRS=${PYTHON_INCLUDE_DIRS}")
+        message(STATUS "Python 3 -- PYTHONLIBS_VERSION_STRING=${PYTHONLIBS_VERSION_STRING}")
+    endif()
+endif()
+
+if (NOT (PYTHONINTERP_FOUND AND PYTHONLIBS_FOUND AND PYTHON_INCLUDE_DIRS) AND FORCE_PYTHON3)
+    message(FATAL_ERROR "Forced Python3 but did not find Python3")
+endif()
+
+if (NOT (PYTHONINTERP_FOUND AND PYTHONLIBS_FOUND AND PYTHON_INCLUDE_DIRS) AND NOT FORCE_PYTHON3)
+    unset(PYTHONLIBS_FOUND CACHE)
+    unset(PYTHON_LIBRARIES CACHE)
+    unset(PYTHON_INCLUDE_PATH CACHE)
+    unset(PYTHON_INCLUDE_DIRS CACHE)
+    unset(PYTHON_DEBUG_LIBRARIES CACHE)
+    unset(PYTHONLIBS_VERSION_STRING CACHE)
+
+    unset(PYTHONINTERP_FOUND CACHE)
+    unset(PYTHON_EXECUTABLE CACHE)
+    unset(PYTHON_VERSION_STRING CACHE)
+
+    message(STATUS "Python 3 not fully found or Python 2 has been forced -- trying Python 2.7")
+    find_package(PythonInterp 2.7)
+    find_package(PythonLibs 2.7)
+
+    message(STATUS "Python 2.7 -- PYTHON_EXECUTABLE=${PYTHON_EXECUTABLE}")
+    message(STATUS "Python 2.7 -- PYTHON_LIBRARIES=${PYTHON_LIBRARIES}")
+    message(STATUS "Python 2.7 -- PYTHON_INCLUDE_DIRS=${PYTHON_INCLUDE_DIRS}")
+    message(STATUS "Python 2.7 -- PYTHONLIBS_VERSION_STRING=${PYTHONLIBS_VERSION_STRING}")
+endif()
+
+if (NOT (PYTHONINTERP_FOUND AND PYTHONLIBS_FOUND AND PYTHON_INCLUDE_DIRS) AND FORCE_PYTHON2)
+    message(FATAL_ERROR "Forced Python2 but did not find Python2")
+endif()
+
+
+# -----------------------------------------------------------------------------
 # Add GIT version
 # -----------------------------------------------------------------------------
 find_program (GIT_EXECUTABLE git)
@@ -87,38 +144,49 @@ else()
   set(GIT_SHA "GIT-hash-notfound")
 endif()
 
-option(FINAL_PREDICTOR "Use final predictor" ON)
+option(PREDICT_MODE "Use final predictor" OFF)
 
-if (FINAL_PREDICTOR)
+if (PREDICT_MODE)
     find_package(dmlc REQUIRED)
     find_package(rabit REQUIRED)
     find_package(xgboost REQUIRED)
     if (xgboost_FOUND)
         message(STATUS "XGBoost -- found version ${xgboost_VERSION_MAJOR}.${xgboost_VERSION_MINOR}")
     endif()
-    add_definitions( -DFINAL_PREDICTOR )
+    add_definitions( -DPREDICT_MODE )
 endif()
 
-option(STATS "Don't use statistics at all" OFF)
-if (STATS)
-    if (FINAL_PREDICTOR)
+option(STATS_MODE "Don't use SQL at all" OFF)
+if (STATS_MODE)
+    if (PREDICT_MODE)
         message(FATAL_ERROR "Cannot have stats and final predictor on both")
     endif()
     find_package (Sqlite3)
     IF (SQLITE3_FOUND)
         MESSAGE(STATUS "OK, Found Sqlite3!")
         include_directories(${SQLITE3_INCLUDE_DIR})
-        add_definitions( -DUSE_SQLITE3 )
+        add_definitions( -DSTATS_MODE )
     else ()
-        MESSAGE(STATUS "WARNING: Did not find Sqlite3, Sqlite3 support will be disabled")
-    endif ()
-    add_definitions( -DSTATS_NEEDED )
-    if (NOT SQLITE3_FOUND)
-        message(FATAL_ERROR "SQLite needed for STATS")
+        message(FATAL_ERROR "Did not find Sqlite3! SQLite needed for STATS_MODE")
     endif()
 ELSE ()
-    MESSAGE(STATUS "Not compiling detailed statistics. The system is faster without them")
+    MESSAGE(STATUS "Not using SQLite.")
 ENDIF ()
+
+
+if (SQLITE3_FOUND)
+    if (NOT PYTHON_EXECUTABLE)
+        MESSAGE(FATAL_ERROR "Unfortunately, the python interpreter is needed for statistics because of SQL text generation")
+    endif()
+
+    add_custom_command(
+        OUTPUT  ${CMAKE_CURRENT_BINARY_DIR}/sql_tablestructure.cpp
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        COMMAND ${PYTHON_EXECUTABLE} minisat/utils/xxd-alike.py cmsat_tablestructure.sql ${CMAKE_CURRENT_BINARY_DIR}/sql_tablestructure.cpp
+        DEPENDS ${CMAKE_SOURCE_DIR}/cmsat_tablestructure.sql
+    )
+    add_custom_target(tablestruct ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/sql_tablestructure.cpp)
+endif()
 
 
 option(BIN_DRUP "Use Binay DRUP output" ON)
@@ -135,7 +203,8 @@ set(MINISAT_LIB_SOURCES
     minisat/core/Solver.cc
     minisat/core/cl_predictors.cc
     minisat/utils/sqlitestats.cpp
-#     ${CMAKE_CURRENT_BINARY_DIR}/sql_tablestructure.cpp
+#     minisat/utils/sql_tablestructure.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/sql_tablestructure.cpp
     minisat/simp/SimpSolver.cc)
 
 set(cryptoms_lib_link_libs "")
@@ -157,6 +226,9 @@ target_link_libraries(minisat-lib-static ${ZLIB_LIBRARY} xgboost dmlc rabit rt $
 
 add_executable(minisat_core minisat/core/Main.cc)
 add_executable(minisat_simp minisat/simp/Main.cc)
+
+
+add_dependencies(minisat_simp tablestruct)
 
 if(STATIC_BINARIES)
   target_link_libraries(minisat_core minisat-lib-static)

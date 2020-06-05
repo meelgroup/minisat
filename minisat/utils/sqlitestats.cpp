@@ -295,11 +295,12 @@ void SQLiteStats::addStartupData()
 void SQLiteStats::finishup(const lbool status)
 {
     std::stringstream ss;
-    ss
-    << "INSERT INTO `finishup` (`endTime`, `status`) VALUES ("
-    << "datetime('now') , "
-    << "'" << status << "'"
-    << ");";
+    // TODO : this data should be added
+//     ss
+//     << "INSERT INTO `finishup` (`endTime`, `status`) VALUES ("
+//     << "datetime('now') , "
+//     << "'" << status << "'"
+//     << ");";
 
     if (sqlite3_exec(db, ss.str().c_str(), NULL, NULL, NULL)) {
         cerr << "ERROR Couldn't insert into table 'finishup'" << endl;
@@ -426,7 +427,6 @@ void SQLiteStats::reduceDB(
 void SQLiteStats::dump_clause_stats(
     const Solver* solver
     , uint64_t clid
-    , const uint64_t restartID
     , uint32_t orig_glue
     , uint32_t glue_before_minim
     , uint32_t backtrack_level
@@ -439,7 +439,6 @@ void SQLiteStats::dump_clause_stats(
     int bindAt = 1;
     sqlite3_bind_int64 (stmt_clause_stats, bindAt++, solver->conflicts);
     sqlite3_bind_int64 (stmt_clause_stats, bindAt++, clid);
-    sqlite3_bind_int   (stmt_clause_stats, bindAt++, restartID);
 
     sqlite3_bind_int   (stmt_clause_stats, bindAt++, orig_glue);
     sqlite3_bind_int   (stmt_clause_stats, bindAt++, glue_before_minim);
