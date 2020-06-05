@@ -82,7 +82,10 @@ int main(int argc, char** argv)
         BoolOption strictp("MAIN", "strict", "Validate DIMACS header during parsing.", false);
         BoolOption drup("MAIN", "drup", "Generate DRUP UNSAT proof.", false);
         StringOption drup_file("MAIN", "drup-file", "DRUP UNSAT proof ouput file.", "");
-
+        StringOption sqlite_filename("SqLite", "sqlitedb", "Name where to put the SQLite database.");
+        DoubleOption opt_dump_ratio("SqLite", "cldatadumpratio",
+                                   "Only dump this ratio of clauses' data, randomly selected.", 0.2,
+                                   DoubleRange(0, false, 1, true));
         parseOptions(argc, argv, true);
 
         SimpSolver S;
@@ -94,6 +97,17 @@ int main(int argc, char** argv)
         S.parsing = true;
         S.verbosity = verb;
         S.drup_file = NULL;
+
+#ifdef STATS_MODE
+        if(sqlite_filename == NULL){
+            printf("In Stat Mode, you must provide SQLite filename\n");
+        }
+        assert(sqlite_filename);
+        string s(sqlite_filename);
+        S.sqlite_filename = s;
+        S.set_sqlite(S.sqlite_filename);
+
+#endif
 
         if (drup || strlen(drup_file)) {
             S.drup_file = strlen(drup_file) ? fopen(drup_file, "wb") : stdout;

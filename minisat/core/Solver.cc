@@ -77,12 +77,6 @@ static DoubleOption opt_garbage_frac(
 static IntOption opt_min_learnts_lim(_cat, "min-learnts", "Minimum learnt clause limit", 0,
                                      IntRange(0, INT32_MAX));
 
-static const char* _cats = "SqLite";
-static StringOption sqlite_filename(_cats, "sqlitedb", "Where to put the SQLite database.");
-static DoubleOption opt_dump_ratio(_cats, "cldatadumpratio",
-                                   "Only dump this ratio of clauses' data, randomly selected.", 0.2,
-                                   DoubleRange(0, false, 1, true));
-
 //=================================================================================================
 // Constructor/Destructor:
 
@@ -1099,16 +1093,6 @@ lbool Solver::solve_()
     learntsize_adjust_confl = learntsize_adjust_start_confl;
     learntsize_adjust_cnt = (int)learntsize_adjust_confl;
     lbool status = l_Undef;
-
-    #ifdef STATS_MODE
-    if(sqlite_filename == NULL){
-        printf("In Stat Mode, you must provide SQLite filename");
-    }
-    assert(sqlite_filename);
-    string s(sqlite_filename);
-    set_sqlite(s);
-
-    #endif
 
     if (verbosity >= 1) {
         printf("============================[ Search Statistics ]==============================\n");

@@ -202,6 +202,7 @@ class Solver
         tot_literals;
 
     SQLStats* sqlStats = NULL;
+    string sqlite_filename = "";
 
    protected:
     // Helper structures:
