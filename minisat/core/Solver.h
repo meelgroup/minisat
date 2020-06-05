@@ -119,6 +119,7 @@ class Solver
         , const uint64_t clid
         , const bool decision_cl);
     void dump_sql_cl_data();
+    void stats_del_cl(Clause* cl);
     #endif
 
 

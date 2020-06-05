@@ -256,6 +256,14 @@ void Solver::dump_sql_cl_data() {
         << endl;
     }
 }
+
+void Solver::stats_del_cl(Clause* cl)
+{
+    if (cl->stats.ID != 0 && sqlStats) {
+        sqlStats->cl_last_in_solver(this, cl->stats.ID);
+    }
+}
+
 #endif
 
 
@@ -391,6 +399,7 @@ void Solver::detachClause(CRef cr, bool strict)
 void Solver::removeClause(CRef cr)
 {
     Clause& c = ca[cr];
+    stats_del_cl(&c);   // TODO check
 
     if (drup_file) {
         if (c.mark() != 1) {
