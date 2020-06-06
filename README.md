@@ -8,8 +8,9 @@ Read the [paper](https://www.comp.nus.edu.sg/~meel/Papers/sat19skm.pdf) or the [
 To build and install, issue:
 ```
 git clone https://github.com/meelgroup/minisat
+cd minisat
 git checkout crystalball
-cd minisat/minisat
+git submodule update --init
 mkdir build & cd build
 ln -s ../build_scripts/* .
 ./build_stats.sh
