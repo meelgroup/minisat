@@ -54,6 +54,7 @@ static void parse_DIMACS_main(B& in, Solver& S, bool strictp = false)
     int vars = 0;
     int clauses = 0;
     int cnt = 0;
+
     for (;;) {
         skipWhitespace(in);
         if (*in == EOF)

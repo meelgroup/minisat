@@ -151,6 +151,7 @@ int main(int argc, char** argv)
         }
 
         parse_DIMACS(in, S, (bool)strictp);
+
         gzclose(in);
         FILE* res = (argc >= 3) ? fopen(argv[2], "wb") : NULL;
 

@@ -57,12 +57,9 @@ class QueryAddIdxes (helper.QueryHelper):
         create index `idxclid1-2` on `clause_stats` (`clauseID`);
         create index `idxclid5` on `tags` ( `name`);
         ---
-        create index `idxclid6` on `reduceDB` (`clauseID`, conflicts, latest_satzilla_feature_calc);
         create index `idxclid6-2` on `reduceDB` (`clauseID`, `dump_no`);
         create index `idxclid6-3` on `reduceDB` (`clauseID`, `conflicts`, `dump_no`);
         create index `idxclid6-4` on `reduceDB` (`clauseID`, `conflicts`)
-        ---
-        create index `idxclid7` on `satzilla_features` (`latest_satzilla_feature_calc`);
         ---
         create index `idxclidUCLS-1` on `used_clauses` ( `clauseID`, `used_at`);
         create index `idxclidUCLS-2` on `used_clauses` ( `used_at`);
@@ -98,7 +95,6 @@ class QueryCls (helper.QueryHelper):
             "simplifications"
             , "restarts"
             , "conflicts"
-            , "latest_satzilla_feature_calc"
             , "runtime"
             , "clauseID"
             , "in_xor"
@@ -112,9 +108,6 @@ class QueryCls (helper.QueryHelper):
             "simplifications"
             , "restarts"
             , "prev_restart"
-            , "latest_satzilla_feature_calc"
-            , "antecedents_long_red_age_max"
-            , "antecedents_long_red_age_min"
             , "clauseID"]
         self.clause_dat = helper.query_fragment(
             "clause_stats", not_cols, "cl", options.verbose, self.c)
@@ -188,8 +181,6 @@ class QueryCls (helper.QueryHelper):
         SELECT
         tags.val as `fname`
         {clause_dat}
-        {rst_cur}
-        {satzfeat_dat_cur}
         {rdb0_dat}
         {rdb1_dat}
         {sum_cl_use}
@@ -211,9 +202,6 @@ class QueryCls (helper.QueryHelper):
         join reduceDB as rdb1 on
             rdb1.clauseID = rdb0.clauseID
 
-        join satzilla_features as szfeat_cur
-            on szfeat_cur.latest_satzilla_feature_calc = cl.latest_satzilla_feature_calc
-
         join used_later_short on
             used_later_short.clauseID = rdb0.clauseID
             and used_later_short.rdb0conflicts = rdb0.conflicts
@@ -229,7 +217,6 @@ class QueryCls (helper.QueryHelper):
         join used_later on
             used_later.clauseID = rdb0.clauseID
             and used_later.rdb0conflicts = rdb0.conflicts
-
 
         join cl_last_in_solver on
             cl_last_in_solver.clauseID = rdb0.clauseID
@@ -252,11 +239,9 @@ class QueryCls (helper.QueryHelper):
         self.myformat = {
             "limit": 1000*1000*1000,
             "clause_dat": self.clause_dat,
-            "satzfeat_dat_cur": self.satzfeat_dat.replace("szfeat.", "szfeat_cur."),
             "rdb0_dat": self.rdb0_dat,
             "rdb1_dat": self.rdb0_dat.replace("rdb0", "rdb1"),
             "sum_cl_use": self.sum_cl_use,
-            "rst_cur": self.rst_cur,
             "offset_short" : options.short,
             "offset_long" : options.long
         }

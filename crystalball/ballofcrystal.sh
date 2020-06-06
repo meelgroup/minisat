@@ -63,7 +63,7 @@ set -x
 # =============================================================================
 
 cd "$FNAME-dir"
-../minisat -no-elim -cldatadumpratio="$RATIO" -sqlitedb="$FNAMEOUT.db-raw" -drup-file="$FNAMEOUT.drat" "../$FNAME" | tee minisat-stat-run.out
+../minisat -no-elim -cldatadumpratio="$RATIO" -sqlitedb="$FNAMEOUT.db-raw" -drup-file="$FNAMEOUT.drat" "../$FNAME" #| tee minisat-stat-run.out
 
 # =============================================================================
 #  Run our own DRAT-Trim
@@ -88,16 +88,16 @@ cp "$FNAMEOUT.db" "$FNAMEOUT-min.db"
 
 ../gen_pandas.py "${FNAMEOUT}-min.db" --limit "$FIXED" --conf 1-1 ${EXTRA_GEN_PANDAS_OPTS} --toppercentileshort $SHORTPERC --toppercentilelong $LONGPERC
 
-mkdir -p ../../src/predict
-rm -f ../../src/predict/*.h
+mkdir -p ../minisat/predict
+rm -f ../minisat/predict/*.h    # should it be .boost?
 
 
 # =============================================================================
 #  Create the classifiers
 # =============================================================================
 
-../predict.py "${FNAMEOUT}-min.db-cldata-short-conf-$CONF-pshort$SHORTPERC-plong$LONGPERC.dat" --name short --final --xgboost --basedir ../../src/predict/ --conf $CONF --prefok 2
-../predict.py "${FNAMEOUT}-min.db-cldata-long-conf-$CONF-pshort$SHORTPERC-plong$LONGPERC.dat" --name long --final --xgboost --basedir ../../src/predict/ --conf $CONF --prefok 2
+../predict.py "${FNAMEOUT}-min.db-cldata-short-conf-$CONF-pshort$SHORTPERC-plong$LONGPERC.dat" --name short --final --xgboost --basedir ../minisat/predict --conf $CONF --prefok 2
+../predict.py "${FNAMEOUT}-min.db-cldata-long-conf-$CONF-pshort$SHORTPERC-plong$LONGPERC.dat" --name long --final --xgboost --basedir ../minisat/predict --conf $CONF --prefok 2
 
 )
 
