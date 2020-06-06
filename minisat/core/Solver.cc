@@ -877,6 +877,7 @@ void Solver::reduceDB()
 {
     int i, j;
     double extra_lim = cla_inc / learnts.size(); // Remove any clause below this activity
+    printf("c ReduceDB called\n");
     dump_sql_cl_data();
     sort(learnts, reduceDB_lt(ca));
     // Don't delete binary or locked clauses. From the rest, delete clauses from the first half
@@ -888,6 +889,8 @@ void Solver::reduceDB()
             num_removed_clauses++;
         } else
             learnts[j++] = learnts[i];
+        c.stats.dump_no++;
+        c.stats.reset_rdb_stats();
     }
     learnts.shrink(i - j);
     checkGarbage();
