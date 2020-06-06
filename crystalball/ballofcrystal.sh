@@ -2,22 +2,20 @@
 
 FNAMEOUT="mydata"
 FIXED="6000"
-RATIO="0.99"
+RATIO="0.2"
 CONF=1
 SHORTPERC=50
 LONGPERC=40
 
+NEXT_OP="$1"
+
 if [ "$NEXT_OP" == "-h" ] || [ "$NEXT_OP" == "--help" ]; then
-        echo "You must give a CNF file as input"
-        exit
-    fi
-    initial="$(echo ${NEXT_OP} | head -c 1)"
-    if [ "$1" == "-" ]; then
-        echo "Cannot understand opion, there are no options"
-        exit -1
-    fi
-    FNAME="${NEXT_OP}"
+    echo "You must give a CNF file as input"
+    exit
 fi
+initial="$(echo ${NEXT_OP} | head -c 1)"
+
+FNAME="${NEXT_OP}"
 
 set -e
 
@@ -65,13 +63,13 @@ set -x
 # =============================================================================
 
 cd "$FNAME-dir"
-../minisat -no-var-elim -cldatadumpratio="$RATIO" -sqlitedb="$FNAMEOUT.db-raw" -drup-file="$FNAMEOUT.drat" "../$FNAME" | tee minisat-stat-run.out
+../minisat -no-elim -cldatadumpratio="$RATIO" -sqlitedb="$FNAMEOUT.db-raw" -drup-file="$FNAMEOUT.drat" "../$FNAME" | tee minisat-stat-run.out
 
 # =============================================================================
 #  Run our own DRAT-Trim
 # =============================================================================
-
-../utils/drat-trim/drat-trim "../$FNAME" "$FNAMEOUT.drat" -o "$FNAMEOUT.usedCls" -i
+# TODO : make drat-trim?
+../../drat-trim/drat-trim "../$FNAME" "$FNAMEOUT.drat" -o "$FNAMEOUT.usedCls" -i
 
 # =============================================================================
 #  Augment, fix up and sample the SQLite data

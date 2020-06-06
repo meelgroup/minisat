@@ -1,3 +1,9 @@
+DROP TABLE IF EXISTS `tags`;
+CREATE TABLE `tags` (
+  `name` varchar(500) NOT NULL,
+  `val` varchar(500) NOT NULL
+);
+
 DROP TABLE IF EXISTS `reduceDB`;
 CREATE TABLE `reduceDB` (
   `restarts` int(20) NOT NULL,

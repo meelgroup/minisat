@@ -54,14 +54,7 @@ class QueryAddIdxes (helper.QueryHelper):
         queries = """
         create index `idxclid33` on `sum_cl_use` (`clauseID`, `last_confl_used`);
         ---
-        create index `idxclid1` on `clause_stats` (`clauseID`, conflicts, restarts, latest_satzilla_feature_calc);
         create index `idxclid1-2` on `clause_stats` (`clauseID`);
-        create index `idxclid1-3` on `clause_stats` (`clauseID`, restarts);
-        create index `idxclid1-4` on `clause_stats` (`clauseID`, restarts, prev_restart);
-        create index `idxclid1-5` on `clause_stats` (`clauseID`, prev_restart);
-        create index `idxclid2` on `clause_stats` (clauseID, `prev_restart`, conflicts, restarts, latest_satzilla_feature_calc);
-        create index `idxclid4` on `restart` ( `restarts`);
-        create index `idxclid88` on `restart_dat_for_cl` ( `clauseID`);
         create index `idxclid5` on `tags` ( `name`);
         ---
         create index `idxclid6` on `reduceDB` (`clauseID`, conflicts, latest_satzilla_feature_calc);
@@ -100,28 +93,6 @@ class QueryCls (helper.QueryHelper):
         self.sum_cl_use = helper.query_fragment(
             "sum_cl_use", [], "sum_cl_use", options.verbose, self.c)
 
-        # restart data
-        not_cols = [
-            "simplifications"
-            , "restarts"
-            , "conflicts"
-            , "latest_satzilla_feature_calc"
-            , "runtime"
-            , "propagations"
-            , "decisions"
-            , "flipped"
-            , "replaced"
-            , "eliminated"
-            , "set"
-            , "free"
-            , "numredLits"
-            , "numIrredLits"
-            , "all_props"
-            , "clauseID"
-            , "restartID"]
-        self.rst_cur = helper.query_fragment(
-            "restart_dat_for_cl", not_cols, "rst_cur", options.verbose, self.c)
-
         # RDB data
         not_cols = [
             "simplifications"
@@ -148,16 +119,6 @@ class QueryCls (helper.QueryHelper):
         self.clause_dat = helper.query_fragment(
             "clause_stats", not_cols, "cl", options.verbose, self.c)
 
-        # satzilla data
-        not_cols = [
-            "simplifications"
-            , "restarts"
-            , "conflicts"
-            , "latest_satzilla_feature_calc"
-            , "irred_glue_distr_mean"
-            , "irred_glue_distr_var"]
-        self.satzfeat_dat = helper.query_fragment(
-            "satzilla_features", not_cols, "szfeat", options.verbose, self.c)
 
         self.common_limits = """
         order by random()
@@ -243,11 +204,6 @@ class QueryCls (helper.QueryHelper):
         --       since it's a FULL join
         join clause_stats as cl on
             cl.clauseID = rdb0.clauseID
-
-        -- WARN: ternary clauses are explicity NOT enabled here
-        --       since it's a FULL join
-        join restart_dat_for_cl as rst_cur
-            on rst_cur.clauseID = rdb0.clauseID
 
         join sum_cl_use on
             sum_cl_use.clauseID = rdb0.clauseID
@@ -485,12 +441,6 @@ def one_database(dbfname):
                 conf=conf,
                 percshort=options.top_percentile_short,
                 perclong=options.top_percentile_long)
-
-            # some cleanup, stats
-            #df["fname"] = df["fname"].astype("category")
-            #df["cl.cur_restart_type"] = df["cl.cur_restart_type"].astype("category")
-            #df["rdb0.cur_restart_type"] = df["rdb0.cur_restart_type"].astype("category")
-            #df["rdb1.cur_restart_type"] = df["rdb1.cur_restart_type"].astype("category")
 
             dump_dataframe(df, cleanname)
 

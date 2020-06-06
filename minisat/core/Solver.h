@@ -106,6 +106,7 @@ class Solver
     //SQLite Setup and Methods
     #ifdef STATS_MODE
     void set_sqlite(string filename);
+    void add_sql_tag(const string& name, const string& val);
     void dump_search_sql(const double myTime);
     void set_clause_data(
             Clause* cl

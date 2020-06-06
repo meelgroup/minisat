@@ -12,9 +12,20 @@ cd minisat
 git checkout crystalball
 git submodule update --init
 mkdir build & cd build
+ln -s ../crystalball/* .
 ln -s ../build_scripts/* .
-./build_stats.sh
+
+# Let's get an unsatisfiable CNF
+wget https://www.msoos.org/largefiles/goldb-heqc-i10mul.cnf.gz
+gunzip goldb-heqc-i10mul.cnf.gz
+
+# Gather the data, denormalize, label, output CSV,
+# create the classifier, generate C++,
+# and build the final SAT solver
+./ballofcrystal.sh --csv goldb-heqc-i10mul.cnf
+[...compilations and the full data pipeline...]
 ```
+
 
 ### Adding a feature
 Want to extend it further? Here are the details of adding feature and assess their impact.

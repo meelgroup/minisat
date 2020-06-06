@@ -136,6 +136,11 @@ int main(int argc, char** argv)
         if (in == NULL)
             printf("ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1);
 
+        string cnffilename(argv[1]);
+        printf("c problem CNF file : %s\n", cnffilename.c_str());
+        S.add_sql_tag("filename", cnffilename);
+
+
         if (S.verbosity > 0) {
             printf(
                 "============================[ Problem Statistics "

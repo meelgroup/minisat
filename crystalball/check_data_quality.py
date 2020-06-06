@@ -60,8 +60,6 @@ class Queries (helper.QueryHelper):
             # in clean_update_data.py
             {"tbl":"cl_last_in_solver", "elem":"clauseID"},
             {"tbl":"clause_stats", "elem":"clauseID"},
-            {"tbl":"restart", "elem":"restartID"},
-            {"tbl":"restart_dat_for_cl", "elem":"clauseID"},
         ]
 
         for only_one in only_ones:
@@ -84,8 +82,7 @@ class Queries (helper.QueryHelper):
                   format(**only_one, t=(time.time()-t)))
 
     def check_all_clauses_have_N(self):
-        Ns = [{"tbl1":"reduceDB", "tbl2":"restart_dat_for_cl", "elem":"clauseID"},
-              {"tbl1":"reduceDB", "tbl2":"cl_last_in_solver", "elem":"clauseID"},
+        Ns = [{"tbl1":"reduceDB", "tbl2":"cl_last_in_solver", "elem":"clauseID"},
               {"tbl1":"reduceDB", "tbl2":"clause_stats", "elem":"clauseID"}
           ]
         for n in Ns:
@@ -107,29 +104,6 @@ class Queries (helper.QueryHelper):
                 exit(-1)
 
         print("Checked all clauses have a %s. T: %-2.3f" % (Ns, time.time()-t))
-
-    def check_is_null(self):
-
-        is_nulls = [
-            {"tbl":"restart", "col":"clauseID"},
-            {"tbl":"restart_data_for_var", "col":"clauseID"}
-        ]
-
-        t = time.time()
-        for is_null in is_nulls:
-            q = """
-            select * from {tbl} where {col} is not NULL
-            """.format(**is_null)
-            cursor = self.c.execute(q)
-            bad = False
-            for row in cursor:
-                bad = True
-                print("ERROR: {col} is not null in table {tbl}: {row}".format(**is_null), row=row)
-
-            if bad:
-                exit(-1)
-
-        print("Checked that some things are NULL. T: %-2.3f" % (time.time()-t))
 
     def check_incorrect_data_values(self):
         incorrect = [

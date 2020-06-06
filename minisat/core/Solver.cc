@@ -179,6 +179,14 @@ void Solver::set_sqlite(string filename)
     }
 }
 
+void Solver::add_sql_tag(const string& name, const string& val)
+{
+    if (sqlStats) {
+        sqlStats->add_tag(std::make_pair(name, val));
+    }
+}
+
+
 void Solver::dump_sql_clause_data(
     const uint32_t orig_glue
     , const uint32_t glue_before_minim
