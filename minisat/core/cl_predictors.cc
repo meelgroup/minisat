@@ -61,6 +61,9 @@ ClPredictors::~ClPredictors()
 void ClPredictors::load_models(std::string short_fname, std::string long_fname)
 {
     int ret;
+//     const char* filen;// = short_fname.c_str();
+//     std::ifstream infile(short_fname.c_str());
+//     printf("c boost file read %d", infile.good());
     ret = XGBoosterLoadModel(handles[short_pred], short_fname.c_str());
     assert(ret == 0);
 
@@ -87,6 +90,7 @@ void ClPredictors::set_up_input(
 
     //prevent divide by zero
     double orig_glue = cl->stats.orig_glue;
+    if(orig_glue==1) orig_glue++; // TODO please remove
     assert(orig_glue != 1);
     at[x++] =
         ((double)(cl->stats.propagations_made+cl->stats.rdb1_propagations_made))/

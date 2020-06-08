@@ -236,8 +236,9 @@ target_link_libraries(minisat-lib-static ${ZLIB_LIBRARY} ${lib_link_libs})
 add_executable(minisat_core minisat/core/Main.cc)
 add_executable(minisat_simp minisat/simp/Main.cc)
 
-
-add_dependencies(minisat_simp tablestruct)
+if(STATS_MODE)
+    add_dependencies(minisat_simp tablestruct)
+endif()
 
 if(STATIC_BINARIES)
   target_link_libraries(minisat_core minisat-lib-static)

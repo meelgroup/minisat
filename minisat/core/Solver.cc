@@ -153,8 +153,8 @@ Solver::Solver()
 
       //Predict system
       ,
-      pred_conf_short("../predict/predictor_short.boost"),
-      pred_conf_long("../predict/predictor_long.boost"),
+      pred_conf_short("../minisat/predict/predictor_short.boost"),
+      pred_conf_long("../minisat/predict/predictor_long.boost"),
       pred_keep_above(0.5f)
 {
     MYFLAG = 0;
@@ -272,7 +272,7 @@ void Solver::stats_del_cl(Clause* cl)
     }
 }
 
-#endif
+#endif // STATS_MODE
 
 
 //=================================================================================================
@@ -407,8 +407,10 @@ void Solver::detachClause(CRef cr, bool strict)
 void Solver::removeClause(CRef cr)
 {
     Clause& c = ca[cr];
-    stats_del_cl(&c);   // TODO check
 
+#ifdef STATS_MODE
+    stats_del_cl(&c);   // TODO check
+#endif
     if (drup_file) {
         if (c.mark() != 1) {
 #ifdef BIN_DRUP
@@ -834,10 +836,12 @@ struct reduceDB_lt {
     }
 };
 
+
+#ifdef PREDICT_MODE
 void Solver::reduceDB_ml()
 {
     int i, j;
-
+    printf("c ReduceDB_ml called\n");
     // TODO : i want to replace pred_keep_above with extra_lim sometime
     // double extra_lim = cla_inc / learnts.size();
     // -- Remove any clause below this activity
@@ -860,9 +864,10 @@ void Solver::reduceDB_ml()
 
         if (c.size() > 2 && !locked(c) &&
             predictors->predict_short(&c, conflicts, last_touched_diff, act_ranking_rel,
-                                      act_ranking_top_10) < pred_keep_above)
+                                      act_ranking_top_10) < pred_keep_above){
             removeClause(learnts[i]);
-        else
+            num_removed_clauses++;
+}  else
             learnts[j++] = learnts[i];
 
         c.stats.rdb1_propagations_made = c.stats.propagations_made;
@@ -872,13 +877,18 @@ void Solver::reduceDB_ml()
 
     checkGarbage();
 }
+#endif
 
 void Solver::reduceDB()
 {
     int i, j;
     double extra_lim = cla_inc / learnts.size(); // Remove any clause below this activity
     printf("c ReduceDB called\n");
+
+#ifdef STATS_MODE
     dump_sql_cl_data();
+#endif
+
     sort(learnts, reduceDB_lt(ca));
     // Don't delete binary or locked clauses. From the rest, delete clauses from the first half
     // and clauses with activity smaller than 'extra_lim':
@@ -1032,20 +1042,24 @@ lbool Solver::search(int nof_conflicts)
                 claBumpActivity(ca[cr]);
                 uncheckedEnqueue(learnt_clause[0], cr);
                 ca[cr].stats.ID = clauseID;
-                            if (myrnd <= cldatadumpratio) {
-                to_dump = true;
-                clauseID++;
-                ca[cr].stats.locked_for_data_gen = true;
-                if (sqlStats) {
-                        dump_sql_clause_data(
-                        glue
-                        , glue_before_minim
-                        , decisionLevel()
-                        , clauseID
-                        , true
-                        );
+
+#ifdef STATS_MODE
+                if (myrnd <= cldatadumpratio) {
+                    to_dump = true;
+                    clauseID++;
+                    ca[cr].stats.locked_for_data_gen = true;
+                    if (sqlStats) {
+                            dump_sql_clause_data(
+                            glue
+                            , glue_before_minim
+                            , decisionLevel()
+                            , clauseID
+                            , true
+                            );
+                    }
                 }
-            }
+#endif
+
             }
 
             if (drup_file) {
@@ -1090,9 +1104,11 @@ lbool Solver::search(int nof_conflicts)
 
             if (learnts.size() - nAssigns() >= max_learnts)
                 // Reduce the set of learnt clauses:
+#ifdef PREDICT_MODE
+                reduceDB_ml();
+#else
                 reduceDB();
-            //                 reduceDB_ml();
-
+#endif
             Lit next = lit_Undef;
             while (decisionLevel() < assumptions.size()) {
                 // Perform user provided assumption:

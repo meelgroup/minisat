@@ -138,8 +138,10 @@ int main(int argc, char** argv)
 
         string cnffilename(argv[1]);
         printf("c problem CNF file : %s\n", cnffilename.c_str());
-        S.add_sql_tag("filename", cnffilename);
 
+#ifdef STAT_MODE
+        S.add_sql_tag("filename", cnffilename);
+#endif
 
         if (S.verbosity > 0) {
             printf(
