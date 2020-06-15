@@ -233,7 +233,7 @@ add_library(minisat-lib-shared SHARED ${MINISAT_LIB_SOURCES})
 target_link_libraries(minisat-lib-shared ${ZLIB_LIBRARY} ${lib_link_libs})
 target_link_libraries(minisat-lib-static ${ZLIB_LIBRARY} ${lib_link_libs})
 
-add_executable(minisat_core minisat/core/Main.cc)
+#add_executable(minisat_core minisat/core/Main.cc)
 add_executable(minisat_simp minisat/simp/Main.cc)
 
 if(STATS_MODE)
@@ -241,10 +241,10 @@ if(STATS_MODE)
 endif()
 
 if(STATIC_BINARIES)
-  target_link_libraries(minisat_core minisat-lib-static)
+  #target_link_libraries(minisat_core minisat-lib-static)
   target_link_libraries(minisat_simp minisat-lib-static)
 else()
-  target_link_libraries(minisat_core minisat-lib-shared)
+  #target_link_libraries(minisat_core minisat-lib-shared)
   target_link_libraries(minisat_simp minisat-lib-shared)
 endif()
 
@@ -260,7 +260,7 @@ set_target_properties(minisat_simp       PROPERTIES OUTPUT_NAME "minisat")
 #------------------------------------------------------------------------------
 # Installation targets:
 #------------------------------------------------------------------------------
-install(TARGETS minisat-lib-static minisat-lib-shared minisat_core minisat_simp
+install(TARGETS minisat-lib-static minisat-lib-shared minisat_simp #minisat_core
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib)
