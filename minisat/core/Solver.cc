@@ -142,8 +142,9 @@ Solver::Solver()
       simpDB_props(0),
       progress_estimate(0),
       remove_satisfied(true),
-      next_var(0)
+      next_var(0),
 
+      num_locked_for_data_gen(0)
       // Resource constraints:
       //
       ,
@@ -1087,6 +1088,9 @@ lbool Solver::search(int nof_conflicts)
                            (int)dec_vars - (trail_lim.size() == 0 ? trail.size() : trail_lim[0]),
                            nClauses(), (int)clauses_literals, (int)max_learnts, nLearnts(),
                            (double)learnts_literals / nLearnts(), progressEstimate() * 100);
+#ifdef STATS_MODE
+            max_learnts += num_locked_for_data_gen;
+#endif
             }
 
         } else {
@@ -1102,13 +1106,14 @@ lbool Solver::search(int nof_conflicts)
             if (decisionLevel() == 0 && !simplify())
                 return l_False;
 
-            if (learnts.size() - nAssigns() >= max_learnts)
+            if (learnts.size() - nAssigns() >= max_learnts){
                 // Reduce the set of learnt clauses:
 #ifdef PREDICT_MODE
                 reduceDB_ml();
 #else
                 reduceDB();
 #endif
+            }
             Lit next = lit_Undef;
             while (decisionLevel() < assumptions.size()) {
                 // Perform user provided assumption:
