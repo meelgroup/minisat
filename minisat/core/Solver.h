@@ -304,9 +304,10 @@ class Solver
     Var next_var;         // Next variable to be created.
     ClauseAllocator ca;
 
-    //#ifdef FINAL_PREDICTOR
+
+    #ifdef PREDICT_MODE
     ClPredictors* predictors = NULL;
-    //#endif
+#endif
 
     vec<Var> released_vars;
     vec<Var> free_vars;
@@ -325,6 +326,9 @@ class Solver
     double max_learnts;
     double learntsize_adjust_confl;
     int learntsize_adjust_cnt;
+
+    uint64_t num_locked_for_data_gen; //Number of variables set for data generation in STATS_MODE
+
 
     // Resource contraints:
     //
