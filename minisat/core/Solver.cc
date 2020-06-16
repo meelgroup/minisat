@@ -867,7 +867,7 @@ void Solver::reduceDB_ml()
                                       act_ranking_top_10) < pred_keep_above){
             removeClause(learnts[i]);
             num_removed_clauses++;
-}  else
+        }  else
             learnts[j++] = learnts[i];
 
         c.stats.rdb1_propagations_made = c.stats.propagations_made;

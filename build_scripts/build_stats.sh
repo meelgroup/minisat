@@ -2,7 +2,6 @@
 
 set -e
 
-rm -rf cm* CM* lib* cryptomini* Testing* tests* pycryptosat include tests
-rm -f ../tests/cnf-files/*sqlite
-cmake -DSTATS_MODE=ON -DPREDICT_MODE=ON .. -B .
+rm -rf lib* mini*
+cmake -DSTATS_MODE=ON -DPREDICT_MODE=OFF ..
 make -j6

@@ -227,6 +227,7 @@ struct ClauseStats
         // is_decision = false;
         //TODO it's weird, it has been tested to be better with "1"
         activity = 1;
+        dump_no = 0;
         last_touched = 0;
     }
 
@@ -259,7 +260,7 @@ struct ClauseStats
     uint8_t    locked_long = 0;
 
     uint32_t orig_glue;    // Not updated, probably it will always be the same
-    uint16_t dump_no = 0;
+    uint16_t dump_no;
     uint32_t introduced_at_conflict = 0; ///<At what conflict number the clause  was introduced
 
     //for average and sum stats
