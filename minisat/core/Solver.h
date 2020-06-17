@@ -198,12 +198,16 @@ class Solver
     int learntsize_adjust_start_confl;
     double learntsize_adjust_inc;
 
+    int learnt_cl_size;
+
     // Statistics: (read-only member variable)
     //
     uint64_t solves, starts, decisions, rnd_decisions, propagations, conflicts;
     uint64_t dec_vars, num_clauses, num_learnts, clauses_literals, learnts_literals, max_literals,
         tot_literals;
     uint64_t num_removed_clauses;
+    uint64_t conflicts_this_restart;
+    int old_decision_level;
     SQLStats* sqlStats = NULL;
     string sqlite_filename = "";
     double cldatadumpratio;

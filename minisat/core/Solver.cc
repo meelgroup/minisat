@@ -111,7 +111,8 @@ Solver::Solver()
       //
       ,
       learntsize_adjust_start_confl(100),
-      learntsize_adjust_inc(1.5)
+      learntsize_adjust_inc(1.5),
+      learnt_cl_size(0)
 
       // Statistics: (formerly in 'SolverStats')
       //
@@ -129,7 +130,9 @@ Solver::Solver()
       learnts_literals(0),
       max_literals(0),
       tot_literals(0),
-      num_removed_clauses(0)
+      num_removed_clauses(0),
+      conflicts_this_restart(0),
+      old_decision_level(0)
 
       ,
       watches(WatcherDeleted(ca)),
@@ -201,10 +204,10 @@ void Solver::dump_sql_clause_data(
         , orig_glue
         , glue_before_minim
         , decisionLevel()
-        , 0
+        , learnt_cl_size
         , old_decision_level
         , trail.size()
-        , 0
+        , conflicts_this_restart
         , is_decision
     );
 }
@@ -884,13 +887,16 @@ void Solver::reduceDB()
 {
     int i, j;
     double extra_lim = cla_inc / learnts.size(); // Remove any clause below this activity
-    printf("c ReduceDB called\n");
+    printf("c ReduceDB called \n");
 
 #ifdef STATS_MODE
     dump_sql_cl_data();
+    printf("c Clauses locked for data generation %lu (%4.2f %% of learnt clauses) \n",
+        num_locked_for_data_gen, 100.0*(float)num_locked_for_data_gen/nLearnts());
 #endif
 
     sort(learnts, reduceDB_lt(ca));
+    // Don't delete binary or locked clauses. From the rest, delete clauses from the first half
     // Don't delete binary or locked clauses. From the rest, delete clauses from the first half
     // and clauses with activity smaller than 'extra_lim':
     for (i = j = 0; i < learnts.size(); i++) {
@@ -1014,12 +1020,15 @@ lbool Solver::search(int nof_conflicts)
     vec<Lit> learnt_clause;
     unsigned int glue, glue_before_minim;
     starts++;
+    conflicts_this_restart = 0;
 
     for (;;) {
+        old_decision_level = decisionLevel();  // TODO correct?
         CRef confl = propagate();
         if (confl != CRef_Undef) {
             // CONFLICT
             conflicts++;
+            conflicts_this_restart++;
             conflictC++;
             bool to_dump = false;
             double myrnd = drand(random_seed);
@@ -1028,6 +1037,7 @@ lbool Solver::search(int nof_conflicts)
 
             learnt_clause.clear();
             analyze(confl, learnt_clause, backtrack_level, glue, glue_before_minim);
+            learnt_cl_size = learnt_clause.size();
             cancelUntil(backtrack_level);
 
 
@@ -1049,11 +1059,12 @@ lbool Solver::search(int nof_conflicts)
                     to_dump = true;
                     clauseID++;
                     ca[cr].stats.locked_for_data_gen = true;
+                    num_locked_for_data_gen++;
                     if (sqlStats) {
                             dump_sql_clause_data(
                             glue
                             , glue_before_minim
-                            , decisionLevel()
+                            , old_decision_level
                             , clauseID
                             , true
                             );

@@ -260,7 +260,7 @@ struct ClauseStats
     uint8_t    locked_long = 0;
 
     uint32_t orig_glue;    // Not updated, probably it will always be the same
-    uint16_t dump_no;
+    uint16_t dump_no;       // not how many times it is up for deletion, but how many 10k conflicts
     uint32_t introduced_at_conflict = 0; ///<At what conflict number the clause  was introduced
 
     //for average and sum stats
