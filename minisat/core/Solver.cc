@@ -243,8 +243,8 @@ void Solver::dump_sql_cl_data() {
             continue;
         }
 
-        const bool locked = true ; // TODO clause_locked(*cl, offs);
-        const uint32_t act_ranking_top_10 = std::ceil((double)i/((double)learnts.size()/10.0))+1;
+        const bool locked = true ; // TODO clause_locked(*cl, offs);l
+        const uint32_t act_ranking_top_10 = std::ceil((double)i/((double)learnts.size()/10.0));
         //cout << "Ranking top 10: " << act_ranking_top_10 << " act: " << cl->stats.activity << endl;
         sqlStats->reduceDB(
             this
@@ -781,6 +781,7 @@ CRef Solver::propagate()
             assert(c[1] == false_lit);
             i++;
             c.stats.propagations_made++; // TODO : correct?
+            c.stats.sum_propagations_made++; // TODO : correct?
             c.stats.rdb1_propagations_made++;
 
             // If 0th watch is true, then clause is already satisfied.
@@ -1100,7 +1101,7 @@ lbool Solver::search(int nof_conflicts)
                            nClauses(), (int)clauses_literals, (int)max_learnts, nLearnts(),
                            (double)learnts_literals / nLearnts(), progressEstimate() * 100);
 #ifdef STATS_MODE
-            max_learnts += num_locked_for_data_gen;
+//             max_learnts += num_locked_for_data_gen;
 #endif
             }
 
