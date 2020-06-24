@@ -1083,12 +1083,13 @@ lbool Solver::search(int nof_conflicts)
                 ca[cr].update_learnt_clause_conflict_num(conflicts);
                 claBumpActivity(ca[cr]);
                 uncheckedEnqueue(learnt_clause[0], cr);
+                if(drup_debug) clauseID++;
                 ca[cr].stats.ID = clauseID;
 
 #ifdef STATS_MODE
                 if (myrnd <= cldatadumpratio) {
                     to_dump = true;
-                    clauseID++;
+                    if(!drup_debug)clauseID++;
                     ca[cr].stats.locked_for_data_gen = true;
                     num_locked_for_data_gen++;
                     if (sqlStats) {
