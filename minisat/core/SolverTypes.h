@@ -214,8 +214,7 @@ const lbool l_Undef((uint8_t)2);
 class Clause;
 typedef RegionAllocator<uint32_t>::Ref CRef;
 
-struct ClauseStats
-{
+struct ClauseStats {
     ClauseStats()
     {
         glue = 1000;
@@ -232,51 +231,53 @@ struct ClauseStats
     }
 
     //Stored data
-    uint32_t glue:20;  //currently in code limited to 100'000
+    uint32_t glue : 20; //currently in code limited to 100'000
     // uint32_t is_decision:1;
     // uint32_t marked_clause:1;
     // uint32_t ttl:2;
     // uint32_t which_red_array:3;
-    uint32_t locked_for_data_gen:1;
-    float   activity;
+    uint32_t locked_for_data_gen : 1;
+    float activity;
     uint32_t last_touched;
-    float       glue_hist_long; // Not updated
-    float       glue_hist_queue; // Not updated
+    float glue_hist_long;  // Not updated
+    float glue_hist_queue; // Not updated
     // float       glue_hist;
-    float       size_hist; // Not updated
-    uint32_t    glue_before_minim;  // Is the minimization same here?
+    float size_hist;            // Not updated
+    uint32_t glue_before_minim; // Is the minimization same here?
     // uint32_t    num_overlap_literals;
-    float       antec_overlap_hist; // Not updated
-    uint32_t    num_total_lits_antecedents; // Not updated
+    float antec_overlap_hist;            // Not updated
+    uint32_t num_total_lits_antecedents; // Not updated
     // uint32_t    rdb1_last_touched_diff;
-    uint32_t    num_antecedents; // Not updated
-    float       branch_depth_hist_queue; // Not updated
-    float       num_resolutions_hist_lt;
+    uint32_t num_antecedents;      // Not updated
+    float branch_depth_hist_queue; // Not updated
+    float num_resolutions_hist_lt;
     // uint32_t    trail_depth_hist_longer;
     // float       rdb1_act_ranking_rel = 0;
     // uint8_t     rdb1_act_ranking_top_10 = 0;
 
     //for locking in for long
-    uint8_t    locked_long = 0;
+    uint8_t locked_long = 0;
 
-    uint32_t orig_glue;    // Not updated, probably it will always be the same
-    uint16_t dump_no;       // not how many times it is up for deletion, but how many 10k conflicts
+    uint32_t orig_glue; // Not updated, probably it will always be the same
+    uint16_t dump_no;   // not how many times it is up for deletion, but how many 10k conflicts
     uint32_t introduced_at_conflict = 0; ///<At what conflict number the clause  was introduced
 
     //for average and sum stats
     uint32_t sum_uip1_used = 0; ///N.o. times claue was used during 1st UIP generation for ALL TIME
 
     //below resets
-    uint32_t used_for_uip_creation = 0; ///N.o. times claue was used during 1st UIP generation in this RDB
+    uint32_t used_for_uip_creation =
+        0; ///N.o. times claue was used during 1st UIP generation in this RDB
     // uint32_t rdb1_used_for_uip_creation = 0; ///N.o. times claue was used during 1st UIP generation in previous RDB
-    uint32_t propagations_made = 0; ///<Number of times caused propagation
+    uint32_t propagations_made = 0;      ///<Number of times caused propagation
     uint32_t rdb1_propagations_made = 0; ///<Number of times caused propagation, last round
-    uint32_t sum_propagations_made = 0; ///<Number of times caused propagation
+    uint32_t sum_propagations_made = 0;  ///<Number of times caused propagation
 
     int32_t ID = 0;
 
     uint32_t conflicts_made = 0; ///<Number of times caused conflict
-    uint32_t clause_looked_at = 0; ///<Number of times the clause has been deferenced during propagation
+    uint32_t clause_looked_at =
+        0; ///<Number of times the clause has been deferenced during propagation
 
     void reset_rdb_stats()
     {
@@ -297,13 +298,13 @@ class Clause
         unsigned learnt : 1;
         unsigned has_extra : 1;
         unsigned reloced : 1;
-        unsigned size : BITS_REALSIZE;  //TODO : what should be the value
+        unsigned size : BITS_REALSIZE; //TODO : what should be the value
     } header;
 
    public:
     ClauseStats stats;
 
-   private :
+   private:
     union {
         Lit lit;
         float act;
@@ -350,7 +351,7 @@ class Clause
         }
     }
 
-public:
+   public:
     void calcAbstraction()
     {
         assert(header.has_extra);
@@ -439,7 +440,7 @@ public:
     {
         stats.glue = i;
     }
-    unsigned int lbd () const
+    unsigned int lbd() const
     {
         return stats.glue;
     }
@@ -447,9 +448,7 @@ public:
     {
         stats.introduced_at_conflict = conflicts;
         stats.last_touched = conflicts; //Any possible harms?
-
     }
-
 
     Lit subsumes(const Clause& other) const;
     void strengthen(Lit p);
