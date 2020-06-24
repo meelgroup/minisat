@@ -21,6 +21,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include <math.h>
 #include <string>
 
+#include <assert.h>
 #include "minisat/core/Solver.h"
 #include "minisat/core/cl_predictors.h"
 #include "minisat/mtl/Alg.h"
@@ -28,7 +29,6 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "minisat/utils/System.h"
 #include "minisat/utils/sqlitestats.h"
 #include "minisat/utils/sqlstats.h"
-#include <assert.h>
 
 using namespace Minisat;
 using std::cerr;
@@ -212,30 +212,31 @@ void Solver::dump_sql_clause_data(
     );
 }
 
-void Solver::dump_sql_cl_data() {
+void Solver::dump_sql_cl_data()
+{
     double myTime = cpuTime();
     assert(sqlStats);
     sqlStats->begin_transaction();
     uint64_t added_to_db = 0;
 
-//     vector<ClOffset> all_learnt;
-//     for(uint32_t lev = 0; lev < longRedCls.size(); lev++) {
-//         auto& cc = longRedCls[lev];
-//         for(const auto& offs: cc) {
-//             Clause* cl = cl_alloc.ptr(offs);
-//             assert(!cl->getRemoved());
-//             assert(cl->red());
-//             assert(!cl->freed());
-//             all_learnt.push_back(offs);
-//         }
-//     }
+    //     vector<ClOffset> all_learnt;
+    //     for(uint32_t lev = 0; lev < longRedCls.size(); lev++) {
+    //         auto& cc = longRedCls[lev];
+    //         for(const auto& offs: cc) {
+    //             Clause* cl = cl_alloc.ptr(offs);
+    //             assert(!cl->getRemoved());
+    //             assert(cl->red());
+    //             assert(!cl->freed());
+    //             all_learnt.push_back(offs);
+    //         }
+    //     }
 
-//     std::sort(all_learnt.begin(), all_learnt.end(), SortRedClsAct(cl_alloc));
+    //     std::sort(all_learnt.begin(), all_learnt.end(), SortRedClsAct(cl_alloc));
 
     // TODO : it is assumed that learnts is already sorted
 
-    for(int i = 0; i < learnts.size(); i++) {
-//         ClOffset offs = all_learnt[i];
+    for (int i = 0; i < learnts.size(); i++) {
+        //         ClOffset offs = all_learnt[i];
         Clause& cl = ca[learnts[i]];
 
         //Only if selected to be dumped
@@ -243,8 +244,8 @@ void Solver::dump_sql_cl_data() {
             continue;
         }
 
-        const bool locked = true ; // TODO clause_locked(*cl, offs);l
-        const uint32_t act_ranking_top_10 = std::ceil((double)i/((double)learnts.size()/10.0));
+        const bool locked = true; // TODO clause_locked(*cl, offs);l
+        const uint32_t act_ranking_top_10 = std::ceil((double)i / ((double)learnts.size() / 10.0));
         //cout << "Ranking top 10: " << act_ranking_top_10 << " act: " << cl->stats.activity << endl;
         sqlStats->reduceDB(
             this
@@ -277,7 +278,6 @@ void Solver::stats_del_cl(Clause* cl)
 }
 
 #endif // STATS_MODE
-
 
 //=================================================================================================
 // Minor methods:
@@ -413,7 +413,7 @@ void Solver::removeClause(CRef cr)
     Clause& c = ca[cr];
 
 #ifdef STATS_MODE
-    stats_del_cl(&c);   // TODO check
+    stats_del_cl(&c); // TODO check
 #endif
     if (drup_file) {
         if (c.mark() != 1) {
@@ -780,7 +780,7 @@ CRef Solver::propagate()
                 c[0] = c[1], c[1] = false_lit;
             assert(c[1] == false_lit);
             i++;
-            c.stats.propagations_made++; // TODO : correct?
+            c.stats.propagations_made++;     // TODO : correct?
             c.stats.sum_propagations_made++; // TODO : correct?
             c.stats.rdb1_propagations_made++;
 
@@ -841,7 +841,6 @@ struct reduceDB_lt {
     }
 };
 
-
 #ifdef PREDICT_MODE
 void Solver::reduceDB_ml()
 {
@@ -869,10 +868,10 @@ void Solver::reduceDB_ml()
 
         if (c.size() > 2 && !locked(c) &&
             predictors->predict_short(&c, conflicts, last_touched_diff, act_ranking_rel,
-                                      act_ranking_top_10) < pred_keep_above){
+                                      act_ranking_top_10) < pred_keep_above) {
             removeClause(learnts[i]);
             num_removed_clauses++;
-        }  else
+        } else
             learnts[j++] = learnts[i];
 
         c.stats.rdb1_propagations_made = c.stats.propagations_made;
@@ -893,7 +892,7 @@ void Solver::reduceDB()
 #ifdef STATS_MODE
     dump_sql_cl_data();
     printf("c Clauses locked for data generation %lu (%4.2f %% of learnt clauses) \n",
-        num_locked_for_data_gen, 100.0*(float)num_locked_for_data_gen/nLearnts());
+           num_locked_for_data_gen, 100.0 * (float)num_locked_for_data_gen / nLearnts());
 #endif
 
     sort(learnts, reduceDB_lt(ca));
@@ -902,7 +901,8 @@ void Solver::reduceDB()
     // and clauses with activity smaller than 'extra_lim':
     for (i = j = 0; i < learnts.size(); i++) {
         Clause& c = ca[learnts[i]];
-        if (c.size() > 2 && !locked(c) && !c.stats.locked_for_data_gen && (i < learnts.size() / 2 || c.activity() < extra_lim)){
+        if (c.size() > 2 && !locked(c) && !c.stats.locked_for_data_gen &&
+            (i < learnts.size() / 2 || c.activity() < extra_lim)) {
             removeClause(learnts[i]);
             num_removed_clauses++;
         } else
@@ -1024,7 +1024,7 @@ lbool Solver::search(int nof_conflicts)
     conflicts_this_restart = 0;
 
     for (;;) {
-        old_decision_level = decisionLevel();  // TODO correct?
+        old_decision_level = decisionLevel(); // TODO correct?
         CRef confl = propagate();
         if (confl != CRef_Undef) {
             // CONFLICT
@@ -1040,7 +1040,6 @@ lbool Solver::search(int nof_conflicts)
             analyze(confl, learnt_clause, backtrack_level, glue, glue_before_minim);
             learnt_cl_size = learnt_clause.size();
             cancelUntil(backtrack_level);
-
 
             if (learnt_clause.size() == 1) {
                 uncheckedEnqueue(learnt_clause[0]);
@@ -1086,7 +1085,6 @@ lbool Solver::search(int nof_conflicts)
 #endif
             }
 
-
             varDecayActivity();
             claDecayActivity();
 
@@ -1118,7 +1116,7 @@ lbool Solver::search(int nof_conflicts)
             if (decisionLevel() == 0 && !simplify())
                 return l_False;
 
-            if (learnts.size() - nAssigns() >= max_learnts){
+            if (learnts.size() - nAssigns() >= max_learnts) {
                 // Reduce the set of learnt clauses:
 #ifdef PREDICT_MODE
                 reduceDB_ml();
@@ -1375,7 +1373,7 @@ void Solver::printStats() const
     printf("conflict literals     : %-12" PRIu64 "   (%4.2f %% deleted)\n", tot_literals,
            (max_literals - tot_literals) * 100 / (double)max_literals);
     printf("ReduceDb deleted cls  : %-12" PRIu64 "   (%4.2f %% all)\n", num_removed_clauses,
-           (num_removed_clauses) * 100 / (double)conflicts);
+           (num_removed_clauses)*100 / (double)conflicts);
     if (mem_used != 0)
         printf("Memory used           : %.2f MB\n", mem_used);
     printf("CPU time              : %g s\n", cpu_time);

@@ -22,18 +22,17 @@ THE SOFTWARE.
 ***********************************************/
 
 #include "cl_predictors.h"
-#include "SolverTypes.h"
-#include "Solver.h"
 #include <cmath>
+#include "Solver.h"
+#include "SolverTypes.h"
 
 #define MISSING_VAL -1334556787
 
 using namespace Minisat;
 
-enum predict_type {short_pred=0, long_pred=1};
+enum predict_type { short_pred = 0, long_pred = 1 };
 
-ClPredictors::ClPredictors(Solver* _solver) :
-    solver(_solver)
+ClPredictors::ClPredictors(Solver* _solver) : solver(_solver)
 {
     BoosterHandle handle;
     int ret;
@@ -53,7 +52,7 @@ ClPredictors::ClPredictors(Solver* _solver) :
 
 ClPredictors::~ClPredictors()
 {
-    for(auto& h: handles) {
+    for (auto& h: handles) {
         XGBoosterFree(h);
     }
 }
@@ -61,42 +60,35 @@ ClPredictors::~ClPredictors()
 void ClPredictors::load_models(std::string short_fname, std::string long_fname)
 {
     int ret;
-//     const char* filen;// = short_fname.c_str();
-//     std::ifstream infile(short_fname.c_str());
-//     printf("c boost file read %d", infile.good());
+    //     const char* filen;// = short_fname.c_str();
+    //     std::ifstream infile(short_fname.c_str());
+    //     printf("c boost file read %d", infile.good());
     ret = XGBoosterLoadModel(handles[short_pred], short_fname.c_str());
     assert(ret == 0);
 
-    ret =XGBoosterLoadModel(handles[long_pred], long_fname.c_str());
+    ret = XGBoosterLoadModel(handles[long_pred], long_fname.c_str());
     assert(ret == 0);
 }
 
-void ClPredictors::set_up_input(
-    const Clause* cl,
-    const uint64_t sumConflicts,
-    const int64_t last_touched_diff,
-    const double   act_ranking_rel,
-    const uint32_t act_ranking_top_10,
-    const uint32_t cols)
+void ClPredictors::set_up_input(const Clause* cl, const uint64_t sumConflicts,
+                                const int64_t last_touched_diff, const double act_ranking_rel,
+                                const uint32_t act_ranking_top_10, const uint32_t cols)
 {
-    float *at = train;
+    float* at = train;
     uint32_t x = 0;
 
-    at[x++] =
-        ((double)(cl->stats.propagations_made+cl->stats.rdb1_propagations_made))/
-        ::log2((double)cl->stats.num_resolutions_hist_lt);
+    at[x++] = ((double)(cl->stats.propagations_made + cl->stats.rdb1_propagations_made)) /
+              ::log2((double)cl->stats.num_resolutions_hist_lt);
     //((rdb0.propagations_made+rdb1.propagations_made)/log2(cl.num_resolutions_hist_lt))
-
 
     //prevent divide by zero
     double orig_glue = cl->stats.orig_glue;
-    if(orig_glue==1) orig_glue++; // TODO please remove
+    if (orig_glue == 1)
+        orig_glue++; // TODO please remove
     assert(orig_glue != 1);
-    at[x++] =
-        ((double)(cl->stats.propagations_made+cl->stats.rdb1_propagations_made))/
-        ::log2(orig_glue);
+    at[x++] = ((double)(cl->stats.propagations_made + cl->stats.rdb1_propagations_made)) /
+              ::log2(orig_glue);
     //((rdb0.propagations_made+rdb1.propagations_made)/log2(cl.orig_glue))
-
 
     //prevent divide by zero
     uint64_t time_inside_solver = solver->conflicts - cl->stats.introduced_at_conflict;
@@ -109,10 +101,8 @@ void ClPredictors::set_up_input(
         sum_uip1_used = 1;
     }
     at[x++] =
-        ::log2(cl->stats.glue_before_minim)/
-        ((double)sum_uip1_used/(double)time_inside_solver);
+        ::log2(cl->stats.glue_before_minim) / ((double)sum_uip1_used / (double)time_inside_solver);
     //(log2(cl.glue_before_minim)/(rdb0.sum_uip1_used/cl.time_inside_solver))
-
 
     //prevent divide by zero
     //updated glue can actually be 1. Original glue cannot.
@@ -120,64 +110,48 @@ void ClPredictors::set_up_input(
     if (glue == 1) {
         glue = 2;
     }
-    at[x++] =
-        (double)cl->stats.sum_uip1_used/
-        ::log2(glue);
+    at[x++] = (double)cl->stats.sum_uip1_used / ::log2(glue);
     //(rdb0.sum_uip1_used/log2(rdb0.glue))
 
-
-    at[x++] = ::log2(act_ranking_rel)/(double)cl->stats.orig_glue;
+    at[x++] = ::log2(act_ranking_rel) / (double)cl->stats.orig_glue;
     //(log2(rdb0_act_ranking_rel)/cl.orig_glue)
 
-
-    at[x++] = (double)cl->stats.propagations_made/(double)time_inside_solver;
+    at[x++] = (double)cl->stats.propagations_made / (double)time_inside_solver;
     //(rdb0.propagations_made/cl.time_inside_solver)
 
-
-    at[x++] = ::log2((double)cl->stats.num_antecedents)/(double)cl->stats.num_total_lits_antecedents;
+    at[x++] =
+        ::log2((double)cl->stats.num_antecedents) / (double)cl->stats.num_total_lits_antecedents;
     //(log2(cl.num_antecedents)/cl.num_total_lits_antecedents)
 
-
-    at[x++] = (double)cl->size()/
-        (double)cl->stats.glue_hist_long;
+    at[x++] = (double)cl->size() / (double)cl->stats.glue_hist_long;
     //(rdb0.size/cl.glue_hist_long)
 
-
-    at[x++] = (double)cl->stats.propagations_made/
-        ::log2((double)cl->stats.glue_hist_queue);
+    at[x++] = (double)cl->stats.propagations_made / ::log2((double)cl->stats.glue_hist_queue);
     //(rdb0.propagations_made/(log2(cl.glue_hist_queue)
 
-
-    at[x++] = (double)cl->stats.propagations_made/
-        (double)cl->stats.orig_glue;
+    at[x++] = (double)cl->stats.propagations_made / (double)cl->stats.orig_glue;
     //(rdb0.propagations_made/cl.orig_glue)
 
     double props_made = cl->stats.propagations_made;
     if (props_made == 0) {
         at[x++] = MISSING_VAL;
     } else {
-        at[x++] = ::log2((double)cl->stats.num_resolutions_hist_lt)/
-        (props_made);
+        at[x++] = ::log2((double)cl->stats.num_resolutions_hist_lt) / (props_made);
     }
     //(log2(cl.num_resolutions_hist_lt)/rdb0.propagations_made)
 
-
-    at[x++] = (double)cl->stats.propagations_made/
-        ((double)cl->stats.num_total_lits_antecedents/(double)cl->stats.num_antecedents);
+    at[x++] = (double)cl->stats.propagations_made /
+              ((double)cl->stats.num_total_lits_antecedents / (double)cl->stats.num_antecedents);
     //(rdb0.propagations_made/(cl.num_total_lits_antecedents/cl.num_antecedents))
-
 
     if (props_made == 0) {
         at[x++] = MISSING_VAL;
     } else {
-        at[x++] = (double)cl->stats.size_hist/
-            (double)props_made;
+        at[x++] = (double)cl->stats.size_hist / (double)props_made;
     }
     //(cl.size_hist/rdb0.propagations_made)
 
-
-    at[x++] = (double)cl->stats.propagations_made/
-        (double)cl->stats.antec_overlap_hist;
+    at[x++] = (double)cl->stats.propagations_made / (double)cl->stats.antec_overlap_hist;
     //(rdb0.propagations_made/log2(cl.antec_overlap_hist))
 
     //avoid log(0)
@@ -193,13 +167,12 @@ void ClPredictors::set_up_input(
     }
     //(log2(cl.branch_depth_hist_queue)/rdb0.propagations_made)
 
-
     //NOTE: this is actually really low ranked. Very interesting.
     at[x++] = (double)cl->stats.used_for_uip_creation/
         (double)cl->stats.glue_before_minim;;
     //(rdb0.used_for_uip_creation/cl.glue_before_minim)
 
-    assert(x==cols);
+    assert(x == cols);
 }
 
 float ClPredictors::predict_one(int num, DMatrixHandle dmat)
@@ -232,8 +205,8 @@ float ClPredictors::predict_short(
     set_up_input(cl, sumConflicts, last_touched_diff,
                  act_ranking_rel, act_ranking_top_10,
                  PRED_COLS);
-    int rows=1;
-    int ret = XGDMatrixCreateFromMat((float *)train, rows, PRED_COLS, MISSING_VAL, &dmat);
+    int rows = 1;
+    int ret = XGDMatrixCreateFromMat((float*)train, rows, PRED_COLS, MISSING_VAL, &dmat);
     assert(ret == 0);
 
     float val = predict_one(short_pred, dmat);
@@ -242,19 +215,15 @@ float ClPredictors::predict_short(
     return val;
 }
 
-float ClPredictors::predict_long(
-    const Clause* cl,
-    const uint64_t sumConflicts,
-    const int64_t last_touched_diff,
-    const double   act_ranking_rel,
-    const uint32_t act_ranking_top_10)
+float ClPredictors::predict_long(const Clause* cl, const uint64_t sumConflicts,
+                                 const int64_t last_touched_diff, const double act_ranking_rel,
+                                 const uint32_t act_ranking_top_10)
 {
     // convert to DMatrix
-    set_up_input(cl, sumConflicts, last_touched_diff,
-                 act_ranking_rel, act_ranking_top_10,
+    set_up_input(cl, sumConflicts, last_touched_diff, act_ranking_rel, act_ranking_top_10,
                  PRED_COLS);
-    int rows=1;
-    int ret = XGDMatrixCreateFromMat((float *)train, rows, PRED_COLS, MISSING_VAL, &dmat);
+    int rows = 1;
+    int ret = XGDMatrixCreateFromMat((float*)train, rows, PRED_COLS, MISSING_VAL, &dmat);
     assert(ret == 0);
 
     float val = predict_one(long_pred, dmat);

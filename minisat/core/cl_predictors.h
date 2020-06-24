@@ -25,9 +25,9 @@ THE SOFTWARE.
 
 #define PRED_COLS 16
 
-#include <vector>
-#include <string>
 #include <xgboost/c_api.h>
+#include <string>
+#include <vector>
 
 using std::vector;
 
