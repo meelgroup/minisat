@@ -960,7 +960,13 @@ void Solver::removeSatisfied(vec<CRef>& cs)
         }
         else {
             // Trim clause:
-            bool trimmed = false;
+            bool trimmed = false, empty_on_trimming = false;
+            if (drup_file) {
+                add_oc.clear();
+                for (int i = 0; i < c.size(); i++)
+                    add_oc.push(c[i]);
+            }
+
             assert(value(c[0]) == l_Undef && value(c[1]) == l_Undef);
             for (int k = 2; k < c.size(); k++){
                 if (value(c[k]) == l_False) {
@@ -968,17 +974,26 @@ void Solver::removeSatisfied(vec<CRef>& cs)
                     c.pop();
                     trimmed = true;
                 }
+                if(c.size() == 0)
+                    empty_on_trimming = true;
             }
-            if (trimmed){
-                printf("trimed clause : ");
-                for (int k = 2; k < c.size(); k++){printf("%d ",toInt(c[k]));}
-                if(c.learnt())
-                    printf(" (learnt) \n");
-                else
+            if (trimmed && !empty_on_trimming){
+                if(drup_debug){
+                    printf("clause before trim : ");
+                    for (int k = 2; k < add_oc.size(); k++){printf("%d ",toInt(add_oc[k]));}
                     printf("\n");
 
-                //                 binDRUP('a', c, drup_file, c.stats.ID, conflicts);
-//                 binDRUP('d', c, drup_file, c.stats.ID, conflicts);
+                    printf("trimed clause : ");
+                    for (int k = 2; k < c.size(); k++){printf("%d ",toInt(c[k]));}
+                    if(c.learnt())
+                        printf(" (learnt) \n");
+                    else
+                        printf("\n");
+                }
+#ifdef BIN_DRUP
+                binDRUP('a', c, drup_file, c.stats.ID, conflicts);
+                binDRUP('d', add_oc, drup_file, c.stats.ID, conflicts);
+#endif
             }
             cs[j++] = cs[i];
         }
