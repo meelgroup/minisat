@@ -88,7 +88,11 @@ Solver::Solver()
       drup_file(NULL),
       use_clid(false),
       verbosity(0),
+#ifdef BIN_DRUP
+      drup_debug(false),
+#else
       drup_debug(true),
+#endif
       var_decay(opt_var_decay),
       clause_decay(opt_clause_decay),
       random_var_freq(opt_random_var_freq),
@@ -449,8 +453,8 @@ void Solver::removeClause(CRef cr)
             fprintf(drup_file, "d ");
             for (int i = 0; i < c.size(); i++)
                 fprintf(drup_file, "%i ", (var(c[i]) + 1) * (-2 * sign(c[i]) + 1));
-            if (use_clid){
-                fprintf(drup_file, "0 %d [removeClause]\n", c.stats.ID);
+            if (drup_debug){
+                fprintf(drup_file, "0 %d \n", c.stats.ID);
             } else {
                 fprintf(drup_file, "0\n");
             }
@@ -932,6 +936,7 @@ void Solver::reduceDB()
         Clause& c = ca[learnts[i]];
         if (c.size() > 2 && !locked(c) && !c.stats.locked_for_data_gen &&
             (i < learnts.size() / 2 || c.activity() < extra_lim)) {
+            if (drup_debug) { fprintf(drup_file, "[reduceDB] "); }
             removeClause(learnts[i]);
             num_removed_clauses++;
         } else
@@ -949,16 +954,32 @@ void Solver::removeSatisfied(vec<CRef>& cs)
     int i, j;
     for (i = j = 0; i < cs.size(); i++) {
         Clause& c = ca[cs[i]];
-        if (satisfied(c))
+        if (satisfied(c)){
+            if (drup_debug) { fprintf(drup_file, "[removeSatisfied] "); }
             removeClause(cs[i]);
+        }
         else {
             // Trim clause:
+            bool trimmed = false;
             assert(value(c[0]) == l_Undef && value(c[1]) == l_Undef);
-            for (int k = 2; k < c.size(); k++)
+            for (int k = 2; k < c.size(); k++){
                 if (value(c[k]) == l_False) {
                     c[k--] = c[c.size() - 1];
                     c.pop();
+                    trimmed = true;
                 }
+            }
+            if (trimmed){
+                printf("trimed clause : ");
+                for (int k = 2; k < c.size(); k++){printf("%d ",toInt(c[k]));}
+                if(c.learnt())
+                    printf(" (learnt) \n");
+                else
+                    printf("\n");
+
+                //                 binDRUP('a', c, drup_file, c.stats.ID, conflicts);
+//                 binDRUP('d', c, drup_file, c.stats.ID, conflicts);
+            }
             cs[j++] = cs[i];
         }
     }
@@ -993,9 +1014,14 @@ bool Solver::simplify()
         return true;
 
     // Remove satisfied clauses:
+    if (drup_debug) { fprintf(drup_file, "[simplify - learnt begin] \n"); }
     removeSatisfied(learnts);
+    if (drup_debug) { fprintf(drup_file, "[simplify - learnt fin] \n"); }
+
     if (remove_satisfied) { // Can be turned off.
+        if (drup_debug) { fprintf(drup_file, "[simplify - clauses start] \n"); }
         removeSatisfied(clauses);
+        if (drup_debug) { fprintf(drup_file, "[simplify - clauses fin] \n"); }
 
         // TODO: what todo in if 'remove_satisfied' is false?
 

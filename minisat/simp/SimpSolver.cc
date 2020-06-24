@@ -220,6 +220,7 @@ void SimpSolver::removeClause(CRef cr)
             occurs.smudge(var(c[i]));
         }
 
+    if (drup_debug) { fprintf(drup_file, "[SimpSolver::removeClause] "); }
     Solver::removeClause(cr);
 }
 
@@ -249,6 +250,7 @@ bool SimpSolver::strengthenClause(CRef cr, Lit l)
     }
 
     if (c.size() == 2) {
+        if (drup_debug) { fprintf(drup_file, "[strengthen] "); }
         removeClause(cr);
         c.strengthen(l);
     } else {
@@ -437,8 +439,10 @@ bool SimpSolver::backwardSubsumptionCheck(bool verbose)
                      (subsumption_lim == -1 || ca[cs[j]].size() < subsumption_lim)) {
                 Lit l = c.subsumes(ca[cs[j]]);
 
-                if (l == lit_Undef)
+                if (l == lit_Undef){
+                    if (drup_debug) { fprintf(drup_file, "[backwardSubsumptionCheck] "); }
                     subsumed++, removeClause(cs[j]);
+                }
                 else if (l != lit_Error) {
                     deleted_literals++;
 
@@ -575,9 +579,10 @@ bool SimpSolver::eliminateVar(Var v)
             if (merge(ca[pos[i]], ca[neg[j]], v, resolvent) && !addClause_(resolvent))
                 return false;
 
-    for (int i = 0; i < cls.size(); i++)
+    for (int i = 0; i < cls.size(); i++){
+        if (drup_debug) { fprintf(drup_file, "[eliminateVar] "); }
         removeClause(cls[i]);
-
+    }
     // Free occurs list for this variable:
     occurs[v].clear(true);
 
@@ -617,6 +622,7 @@ bool SimpSolver::substitute(Var v, Lit x)
         if (!addClause_(subst_clause))
             return ok = false;
 
+        if (drup_debug) { fprintf(drup_file, "[substitute] "); }
         removeClause(cls[i]);
     }
 
@@ -751,7 +757,8 @@ void SimpSolver::relocAll(ClauseAllocator& to)
 
     // Subsumption queue:
     //
-    for (int i = subsumption_queue.size(); i > 0; i--) {
+    for (int i = subsumption_queue.size(); i > 0; i--)
+    {
         CRef cr = subsumption_queue.peek();
         subsumption_queue.pop();
         if (ca[cr].mark())
