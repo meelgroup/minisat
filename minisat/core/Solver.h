@@ -21,8 +21,6 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #ifndef Minisat_Solver_h
 #define Minisat_Solver_h
 
-// #define BIN_DRUP
-
 #include "minisat/core/SolverTypes.h"
 #include "minisat/mtl/Alg.h"
 #include "minisat/mtl/Heap.h"
@@ -121,6 +119,7 @@ class Solver
         , const bool decision_cl);
     void dump_sql_cl_data();
     void stats_del_cl(Clause* cl);
+    void sql_dump_last_in_solver();
     #endif
 
 
@@ -173,7 +172,9 @@ class Solver
     // Mode of operation:
     //
     FILE* drup_file;
+    bool use_clid;  // whether to add clause IDs in DRAT proof
     int verbosity;
+    bool drup_debug;
     double var_decay;
     double clause_decay;
     double random_var_freq;

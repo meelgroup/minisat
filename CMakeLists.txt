@@ -32,6 +32,9 @@ option(USE_SORELEASE   "Use SORELEASE in shared library filename." ON)
 option(BIN_DRUP "Use Binay DRUP output" ON)
 if (BIN_DRUP)
     add_definitions( -DBIN_DRUP )
+    message(STATUS "Will emit binary DRUP proof")
+else()
+    message(STATUS "Will emit text DRUP proof")
 endif()
 
 

@@ -86,7 +86,9 @@ Solver::Solver()
       // Parameters (user settable):
       //
       drup_file(NULL),
+      use_clid(false),
       verbosity(0),
+      drup_debug(true),
       var_decay(opt_var_decay),
       clause_decay(opt_clause_decay),
       random_var_freq(opt_random_var_freq),
@@ -271,8 +273,24 @@ void Solver::dump_sql_cl_data() {
 
 void Solver::stats_del_cl(Clause* cl)
 {
+
     if (cl->stats.ID != 0 && sqlStats) {
+//         printf("c stats_del_cl storing clause %d\n",cl->stats.ID);
         sqlStats->cl_last_in_solver(this, cl->stats.ID);
+    }
+}
+
+void Solver::sql_dump_last_in_solver()
+{
+    if (!sqlStats)
+        return;
+    printf("c caling sql_dump_last_in_solver. learnt size now : %d \n", learnts.size());
+    for(int i = 0; i < learnts.size(); i++) {
+        Clause& cl = ca[learnts[i]];
+        if (cl.stats.ID != 0) {
+            printf("c sql_dump_last_in_solver storing clause %d\n",cl.stats.ID);
+            sqlStats->cl_last_in_solver(this, cl.stats.ID);
+        }
     }
 }
 
@@ -364,12 +382,20 @@ bool Solver::addClause_(vec<Lit>& ps)
 #else
         for (int i = 0; i < ps.size(); i++)
             fprintf(drup_file, "%i ", (var(ps[i]) + 1) * (-2 * sign(ps[i]) + 1));
-        fprintf(drup_file, "0\n");
+        if (use_clid){
+            fprintf(drup_file, "0 %d [addClause solver]\n", clid);
+        } else {
+            fprintf(drup_file, "0\n");
+        }
 
         fprintf(drup_file, "d ");
         for (int i = 0; i < add_oc.size(); i++)
             fprintf(drup_file, "%i ", (var(add_oc[i]) + 1) * (-2 * sign(add_oc[i]) + 1));
-        fprintf(drup_file, "0\n");
+        if (use_clid){
+            fprintf(drup_file, "0 %d [addClause solver]\n", clid);
+        } else {
+            fprintf(drup_file, "0\n");
+        }
 #endif
     }
 
@@ -423,7 +449,11 @@ void Solver::removeClause(CRef cr)
             fprintf(drup_file, "d ");
             for (int i = 0; i < c.size(); i++)
                 fprintf(drup_file, "%i ", (var(c[i]) + 1) * (-2 * sign(c[i]) + 1));
-            fprintf(drup_file, "0\n");
+            if (use_clid){
+                fprintf(drup_file, "0 %d [removeClause]\n", c.stats.ID);
+            } else {
+                fprintf(drup_file, "0\n");
+            }
 #endif
         } else
             printf("c Bug. I don't expect this to happen.\n");
@@ -898,7 +928,6 @@ void Solver::reduceDB()
 
     sort(learnts, reduceDB_lt(ca));
     // Don't delete binary or locked clauses. From the rest, delete clauses from the first half
-    // Don't delete binary or locked clauses. From the rest, delete clauses from the first half
     // and clauses with activity smaller than 'extra_lim':
     for (i = j = 0; i < learnts.size(); i++) {
         Clause& c = ca[learnts[i]];
@@ -911,6 +940,7 @@ void Solver::reduceDB()
         c.stats.reset_rdb_stats();
     }
     learnts.shrink(i - j);
+    printf("c reduceDB reduced : %d \n", i-j);
     checkGarbage();
 }
 
@@ -1082,7 +1112,11 @@ lbool Solver::search(int nof_conflicts)
                 for (int i = 0; i < learnt_clause.size(); i++)
                     fprintf(drup_file, "%i ",
                             (var(learnt_clause[i]) + 1) * (-2 * sign(learnt_clause[i]) + 1));
-                fprintf(drup_file, "0\n");
+                if (use_clid){
+                    fprintf(drup_file, "0 %ld [analyze] \n", clauseID);
+                } else {
+                    fprintf(drup_file, "0\n");
+                }
 #endif
             }
 
@@ -1100,8 +1134,9 @@ lbool Solver::search(int nof_conflicts)
                            (int)dec_vars - (trail_lim.size() == 0 ? trail.size() : trail_lim[0]),
                            nClauses(), (int)clauses_literals, (int)max_learnts, nLearnts(),
                            (double)learnts_literals / nLearnts(), progressEstimate() * 100);
+
 #ifdef STATS_MODE
-//             max_learnts += num_locked_for_data_gen;
+            max_learnts += num_locked_for_data_gen;
 #endif
             }
 
@@ -1233,6 +1268,8 @@ lbool Solver::solve_()
         double rest_base =
             luby_restart ? luby(restart_inc, curr_restarts) : pow(restart_inc, curr_restarts);
         status = search(rest_base * restart_first);
+        printf("c learnt size now : %d  [luby %d ]\n", learnts.size(),curr_restarts);
+
         if (!withinBudget())
             break;
         curr_restarts++;
@@ -1240,6 +1277,9 @@ lbool Solver::solve_()
 
     if (verbosity >= 1)
         printf("===============================================================================\n");
+#ifdef STATS_MODE
+    sql_dump_last_in_solver();
+#endif
 
 #ifdef BIN_DRUP
     if (drup_file && status == l_False)

@@ -82,6 +82,7 @@ int main(int argc, char** argv)
         BoolOption strictp("MAIN", "strict", "Validate DIMACS header during parsing.", false);
         BoolOption drup("MAIN", "drup", "Generate DRUP UNSAT proof.", false);
         StringOption drup_file("MAIN", "drup-file", "DRUP UNSAT proof ouput file.", "");
+        BoolOption opt_clid("MAIN", "clid", "Use clauseIDs in DRUP UNSAT proof", true);
         StringOption sqlite_filename("SqLite", "sqlitedb", "Name where to put the SQLite database.");
         DoubleOption opt_dump_ratio("SqLite", "cldatadumpratio",
                                    "Only dump this ratio of clauses' data, randomly selected.", 0.0,
@@ -114,6 +115,10 @@ int main(int argc, char** argv)
             if (S.drup_file == NULL) {
                 S.drup_file = stdout;
                 printf("c Error opening %s for write.\n", (const char*)drup_file);
+            }
+            S.use_clid = opt_clid;
+            if (S.use_clid){
+                printf("c Will add clauseIDs in proof\n");
             }
             printf("c DRUP proof generation: %s\n", S.drup_file == stdout ? "stdout" : drup_file);
         }
