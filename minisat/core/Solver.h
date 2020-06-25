@@ -608,6 +608,7 @@ inline bool Solver::isRemoved(CRef cr) const
 }
 inline bool Solver::locked(const Clause& c) const
 {
+    if(c.stats.locked_for_data_gen) return true;
     return value(c[0]) == l_True && reason(var(c[0])) != CRef_Undef &&
            ca.lea(reason(var(c[0]))) == &c;
 }

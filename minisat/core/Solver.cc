@@ -275,7 +275,7 @@ void Solver::stats_del_cl(Clause* cl)
 {
 
     if (cl->stats.ID != 0 && sqlStats) {
-//         printf("c stats_del_cl storing clause %d\n",cl->stats.ID);
+        if(verbosity > 1) printf("c stats_del_cl storing clause %d\n",cl->stats.ID);
         sqlStats->cl_last_in_solver(this, cl->stats.ID);
     }
 }
@@ -284,12 +284,14 @@ void Solver::sql_dump_last_in_solver()
 {
     if (!sqlStats)
         return;
+    // if(verbosity > 1)
     printf("c caling sql_dump_last_in_solver. learnt size now : %d \n", learnts.size());
     for(int i = 0; i < learnts.size(); i++) {
         Clause& cl = ca[learnts[i]];
         if (cl.stats.ID != 0) {
-            printf("c sql_dump_last_in_solver storing clause %d\n",cl.stats.ID);
-            sqlStats->cl_last_in_solver(this, cl.stats.ID);
+            if(verbosity > 1)
+                printf("c sql_dump_last_in_solver storing clause %d\n",cl.stats.ID);
+            sqlStats->cl_last_in_solver(this, -1*cl.stats.ID);
         }
     }
 }
@@ -383,6 +385,8 @@ bool Solver::addClause_(vec<Lit>& ps)
             fprintf(drup_file, "%i ", (var(ps[i]) + 1) * (-2 * sign(ps[i]) + 1));
         fprintf(drup_file, "0\n");
 
+        if (drup_debug) { fprintf(drup_file, "[remove : addclause_] "); }
+
         fprintf(drup_file, "d ");
         for (int i = 0; i < add_oc.size(); i++)
             fprintf(drup_file, "%i ", (var(add_oc[i]) + 1) * (-2 * sign(add_oc[i]) + 1));
@@ -435,11 +439,12 @@ void Solver::removeClause(CRef cr)
     if (drup_file) {
         if (c.mark() != 1) {
 #ifdef BIN_DRUP
-            binDRUP('d', c, drup_file, 0, 0);
+            binDRUP('d', c, drup_file, c.stats.ID, conflicts);
 #else
             fprintf(drup_file, "d ");
             for (int i = 0; i < c.size(); i++)
                 fprintf(drup_file, "%i ", (var(c[i]) + 1) * (-2 * sign(c[i]) + 1));
+            if(drup_debug) fprintf(drup_file, " 0 %d ", c.stats.ID);
             fprintf(drup_file, "0\n");
 #endif
         } else
@@ -920,10 +925,14 @@ void Solver::reduceDB()
         if (c.size() > 2 && !locked(c) && !c.stats.locked_for_data_gen &&
             (i < learnts.size() / 2 || c.activity() < extra_lim)) {
             if (drup_debug) { fprintf(drup_file, "[reduceDB] "); }
+            if(verbosity > 1 && c.stats.ID) printf("c ReduceDB removing : %d \n", c.stats.ID);
             removeClause(learnts[i]);
             num_removed_clauses++;
-        } else
+        } else{
             learnts[j++] = learnts[i];
+            if(verbosity > 1) printf("c ReduceDB not removing : %d \n", c.stats.ID);
+
+        }
         c.stats.dump_no++;
         c.stats.reset_rdb_stats();
     }
@@ -980,7 +989,7 @@ void Solver::removeSatisfied(vec<CRef>& cs)
                 for (int i = 0; i < c.size(); i++)
                     fprintf(drup_file, "%i ", (var(c[i]) + 1) * (-2 * sign(c[i]) + 1));
                 fprintf(drup_file, "0\n");
-
+                if(drup_debug){ fprintf(drup_file, "[trimming] ");}
                 fprintf(drup_file, "d ");
                 for (int i = 0; i < add_oc.size(); i++)
                     fprintf(drup_file, "%i ", (var(add_oc[i]) + 1) * (-2 * sign(add_oc[i]) + 1));
@@ -1104,6 +1113,8 @@ lbool Solver::search(int nof_conflicts)
             learnt_cl_size = learnt_clause.size();
             cancelUntil(backtrack_level);
 
+            int clid = 0;
+
             if (learnt_clause.size() == 1) {
                 uncheckedEnqueue(learnt_clause[0]);
             } else {
@@ -1115,13 +1126,16 @@ lbool Solver::search(int nof_conflicts)
                 ca[cr].update_learnt_clause_conflict_num(conflicts);
                 claBumpActivity(ca[cr]);
                 uncheckedEnqueue(learnt_clause[0], cr);
-                if(drup_debug) clauseID++;
-                ca[cr].stats.ID = clauseID;
-
+                if(drup_debug) {
+                    clauseID++;
+                    ca[cr].stats.ID = clauseID;
+                }
 #ifdef STATS_MODE
                 if (myrnd <= cldatadumpratio) {
                     to_dump = true;
-                    if(!drup_debug)clauseID++;
+                    clauseID++;
+                    clid = clauseID;
+                    ca[cr].stats.ID = clauseID;
                     ca[cr].stats.locked_for_data_gen = true;
                     num_locked_for_data_gen++;
                     if (sqlStats) {
@@ -1140,13 +1154,13 @@ lbool Solver::search(int nof_conflicts)
 
             if (drup_file) {
 #ifdef BIN_DRUP
-                binDRUP('a', learnt_clause, drup_file, clauseID, conflicts);
+                binDRUP('a', learnt_clause, drup_file, clid, conflicts);
 #else
                 for (int i = 0; i < learnt_clause.size(); i++)
                     fprintf(drup_file, "%i ",
                             (var(learnt_clause[i]) + 1) * (-2 * sign(learnt_clause[i]) + 1));
                 if (use_clid){
-                    fprintf(drup_file, "0 %ld [analyze] \n", clauseID);
+                    fprintf(drup_file, "0 %ld [analyze] \n", clid);
                 } else {
                     fprintf(drup_file, "0\n");
                 }

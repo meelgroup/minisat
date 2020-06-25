@@ -246,11 +246,12 @@ bool SimpSolver::strengthenClause(CRef cr, Lit l)
     }
 
     if (c.size() == 2) {
-        if (drup_debug) { fprintf(drup_file, "[remove : strengthen] "); }
+        if (drup_debug) { fprintf(drup_file, "[remove (2) : strengthen] "); }
         removeClause(cr);
         c.strengthen(l);
     } else {
         if (drup_file) {
+        if (drup_debug) { fprintf(drup_file, "[remove : strengthen] "); }
 #ifdef BIN_DRUP
             binDRUP('d', c, drup_file,0, 0);
 #else

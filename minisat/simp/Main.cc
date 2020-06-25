@@ -105,6 +105,7 @@ int main(int argc, char** argv)
         printf("Error! Please compile using -DBIN_DRUP=OFF to use debug-drup option\n");
         assert(false);
     }
+    S.drup_debug = false;
 #else
     S.drup_debug = opt_debug_drup;
     if(opt_debug_drup)
@@ -279,7 +280,14 @@ int main(int argc, char** argv)
                       ? 20
                       : 0); // (faster than "return", which will invoke the destructor for 'Solver')
 #else
+
+#ifdef STATS_MODE
+        return 0;
+#else
         return (ret == l_True ? 10 : ret == l_False ? 20 : 0);
+
+#endif
+
 #endif
     } catch (OutOfMemoryException&) {
         printf("===============================================================================\n");

@@ -63,7 +63,7 @@ set -x
 # =============================================================================
 
 cd "$FNAME-dir"
-../minisat -no-elim -cldatadumpratio="$RATIO" -sqlitedb="$FNAMEOUT.db-raw" -drup-file="$FNAMEOUT.drat" "../$FNAME" #| tee minisat-stat-run.out
+../minisat -cldatadumpratio="$RATIO" -sqlitedb="$FNAMEOUT.db-raw" -drup-file="$FNAMEOUT.drat" "../$FNAME" #| tee minisat-stat-run.out
 
 # =============================================================================
 #  Run our own DRAT-Trim
