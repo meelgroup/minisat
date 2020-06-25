@@ -197,11 +197,7 @@ bool SimpSolver::addClause_(vec<Lit>& ps)
 #else
         for (int i = 0; i < ps.size(); i++)
             fprintf(drup_file, "%i ", (var(ps[i]) + 1) * (-2 * sign(ps[i]) + 1));
-        if (use_clid){
-            fprintf(drup_file, "0 %lu [addClause SimpSolver]\n", clid);
-        } else {
-            fprintf(drup_file, "0\n");
-        }
+        fprintf(drup_file, "0\n");
 #endif
     }
 
@@ -234,23 +230,23 @@ bool SimpSolver::strengthenClause(CRef cr, Lit l)
     // if (!find(subsumption_queue, &c))
     subsumption_queue.insert(cr);
 
+
+
     if (drup_file) {
+        if(drup_debug) {fprintf(drup_file, "[strengthenClause] ");}
+
 #ifdef BIN_DRUP
         binDRUP_strengthen(c, l, drup_file);
 #else
         for (int i = 0; i < c.size(); i++)
             if (c[i] != l)
                 fprintf(drup_file, "%i ", (var(c[i]) + 1) * (-2 * sign(c[i]) + 1));
-        if (use_clid){
-            fprintf(drup_file, "0 %d [strengthenClause]\n", c.stats.ID);
-        } else {
-            fprintf(drup_file, "0\n");
-        }
+        fprintf(drup_file, "0\n");
 #endif
     }
 
     if (c.size() == 2) {
-        if (drup_debug) { fprintf(drup_file, "[strengthen] "); }
+        if (drup_debug) { fprintf(drup_file, "[remove : strengthen] "); }
         removeClause(cr);
         c.strengthen(l);
     } else {

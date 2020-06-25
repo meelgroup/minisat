@@ -88,11 +88,6 @@ Solver::Solver()
       drup_file(NULL),
       use_clid(false),
       verbosity(0),
-#ifdef BIN_DRUP
-      drup_debug(false),
-#else
-      drup_debug(true),
-#endif
       var_decay(opt_var_decay),
       clause_decay(opt_clause_decay),
       random_var_freq(opt_random_var_freq),
@@ -386,20 +381,12 @@ bool Solver::addClause_(vec<Lit>& ps)
 #else
         for (int i = 0; i < ps.size(); i++)
             fprintf(drup_file, "%i ", (var(ps[i]) + 1) * (-2 * sign(ps[i]) + 1));
-        if (use_clid){
-            fprintf(drup_file, "0 %d [addClause solver]\n", clid);
-        } else {
-            fprintf(drup_file, "0\n");
-        }
+        fprintf(drup_file, "0\n");
 
         fprintf(drup_file, "d ");
         for (int i = 0; i < add_oc.size(); i++)
             fprintf(drup_file, "%i ", (var(add_oc[i]) + 1) * (-2 * sign(add_oc[i]) + 1));
-        if (use_clid){
-            fprintf(drup_file, "0 %d [addClause solver]\n", clid);
-        } else {
-            fprintf(drup_file, "0\n");
-        }
+        fprintf(drup_file, "0\n");
 #endif
     }
 
@@ -453,11 +440,7 @@ void Solver::removeClause(CRef cr)
             fprintf(drup_file, "d ");
             for (int i = 0; i < c.size(); i++)
                 fprintf(drup_file, "%i ", (var(c[i]) + 1) * (-2 * sign(c[i]) + 1));
-            if (drup_debug){
-                fprintf(drup_file, "0 %d \n", c.stats.ID);
-            } else {
-                fprintf(drup_file, "0\n");
-            }
+            fprintf(drup_file, "0\n");
 #endif
         } else
             printf("c Bug. I don't expect this to happen.\n");
@@ -993,6 +976,15 @@ void Solver::removeSatisfied(vec<CRef>& cs)
 #ifdef BIN_DRUP
                 binDRUP('a', c, drup_file, c.stats.ID, conflicts);
                 binDRUP('d', add_oc, drup_file, c.stats.ID, conflicts);
+#else
+                for (int i = 0; i < c.size(); i++)
+                    fprintf(drup_file, "%i ", (var(c[i]) + 1) * (-2 * sign(c[i]) + 1));
+                fprintf(drup_file, "0\n");
+
+                fprintf(drup_file, "d ");
+                for (int i = 0; i < add_oc.size(); i++)
+                    fprintf(drup_file, "%i ", (var(add_oc[i]) + 1) * (-2 * sign(add_oc[i]) + 1));
+                fprintf(drup_file, "0\n");
 #endif
             }
             cs[j++] = cs[i];

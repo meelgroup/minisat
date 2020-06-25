@@ -83,6 +83,7 @@ int main(int argc, char** argv)
         BoolOption drup("MAIN", "drup", "Generate DRUP UNSAT proof.", false);
         StringOption drup_file("MAIN", "drup-file", "DRUP UNSAT proof ouput file.", "");
         BoolOption opt_clid("MAIN", "clid", "Use clauseIDs in DRUP UNSAT proof", true);
+        BoolOption opt_debug_drup("MAIN", "debug-drup", "Add verbose information in text DRUP proof (unsupported by checker)", false);
         StringOption sqlite_filename("SqLite", "sqlitedb", "Name where to put the SQLite database.");
         DoubleOption opt_dump_ratio("SqLite", "cldatadumpratio",
                                    "Only dump this ratio of clauses' data, randomly selected.", 0.0,
@@ -98,6 +99,17 @@ int main(int argc, char** argv)
         S.parsing = true;
         S.verbosity = verb;
         S.drup_file = NULL;
+
+#ifdef BIN_DRUP
+    if(opt_debug_drup){
+        printf("Error! Please compile using -DBIN_DRUP=OFF to use debug-drup option\n");
+        assert(false);
+    }
+#else
+    S.drup_debug = opt_debug_drup;
+    if(opt_debug_drup)
+        printf("c Will add verbose information in text DRUP proof \n");
+#endif
 
 #ifdef STATS_MODE
         if(sqlite_filename == NULL){
@@ -147,7 +159,6 @@ int main(int argc, char** argv)
 #ifdef STAT_MODE
         S.add_sql_tag("filename", cnffilename);
 #endif
-
         if (S.verbosity > 0) {
             printf(
                 "============================[ Problem Statistics "
