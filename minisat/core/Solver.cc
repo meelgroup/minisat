@@ -696,13 +696,39 @@ void Solver::removeSatisfied(vec<CRef>& cs)
         if (satisfied(c))
             removeClause(cs[i]);
         else {
-            // Trim clause:
+                        // Trim clause:
+            bool trimmed = false, empty_on_trimming = false;
+            if (drup_file) {
+                add_oc.clear();
+                for (int i = 0; i < c.size(); i++)
+                    add_oc.push(c[i]);
+            }
+
             assert(value(c[0]) == l_Undef && value(c[1]) == l_Undef);
-            for (int k = 2; k < c.size(); k++)
+            for (int k = 2; k < c.size(); k++){
                 if (value(c[k]) == l_False) {
                     c[k--] = c[c.size() - 1];
                     c.pop();
+                    trimmed = true;
                 }
+                if(c.size() == 0)
+                    empty_on_trimming = true;
+            }
+            if (trimmed){
+#ifdef BIN_DRUP
+                binDRUP('a', c, drup_file);
+                binDRUP('d', add_oc, drup_file);
+#else
+                for (int i = 0; i < c.size(); i++)
+                    fprintf(drup_file, "%i ", (var(c[i]) + 1) * (-2 * sign(c[i]) + 1));
+                fprintf(drup_file, "0\n");
+
+                fprintf(drup_file, "d ");
+                for (int i = 0; i < add_oc.size(); i++)
+                    fprintf(drup_file, "%i ", (var(add_oc[i]) + 1) * (-2 * sign(add_oc[i]) + 1));
+                fprintf(drup_file, "0\n");
+#endif
+            }
             cs[j++] = cs[i];
         }
     }
