@@ -277,6 +277,7 @@ void Solver::stats_del_cl(Clause* cl)
     if (cl->stats.ID != 0 && sqlStats) {
         if(verbosity > 1) printf("c stats_del_cl storing clause %d\n",cl->stats.ID);
         sqlStats->cl_last_in_solver(this, cl->stats.ID);
+        if (drup_debug) { fprintf(drup_file, "[sql-dump] ID : %d  confl : %lu [del-cl]\n", cl->stats.ID, conflicts); }
     }
 }
 
@@ -292,6 +293,8 @@ void Solver::sql_dump_last_in_solver()
             if(verbosity > 1)
                 printf("c sql_dump_last_in_solver storing clause %d\n",cl.stats.ID);
             sqlStats->cl_last_in_solver(this, -1*cl.stats.ID);
+            if (drup_debug) { fprintf(drup_file, "[sql-dump] ID : %d  confl : %lu [last_in_solver]\n", cl.stats.ID, conflicts); }
+
         }
     }
 }
@@ -922,7 +925,7 @@ void Solver::reduceDB()
     // and clauses with activity smaller than 'extra_lim':
     for (i = j = 0; i < learnts.size(); i++) {
         Clause& c = ca[learnts[i]];
-        if (c.size() > 2 && !locked(c) && !c.stats.locked_for_data_gen &&
+        if (c.size() > 2 && !locked(c) &&
             (i < learnts.size() / 2 || c.activity() < extra_lim)) {
             if (drup_debug) { fprintf(drup_file, "[reduceDB] "); }
             if(verbosity > 1 && c.stats.ID) printf("c ReduceDB removing : %d \n", c.stats.ID);
@@ -1130,6 +1133,7 @@ lbool Solver::search(int nof_conflicts)
                     clauseID++;
                     ca[cr].stats.ID = clauseID;
                 }
+                ca[cr].stats.locked_for_data_gen = false;
 #ifdef STATS_MODE
                 if (myrnd <= cldatadumpratio) {
                     to_dump = true;
@@ -1160,7 +1164,7 @@ lbool Solver::search(int nof_conflicts)
                     fprintf(drup_file, "%i ",
                             (var(learnt_clause[i]) + 1) * (-2 * sign(learnt_clause[i]) + 1));
                 if (use_clid){
-                    fprintf(drup_file, "0 %ld [analyze] \n", clid);
+                    fprintf(drup_file, "0 %ld [analyze] \n", clauseID);
                 } else {
                     fprintf(drup_file, "0\n");
                 }

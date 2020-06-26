@@ -341,6 +341,8 @@ void SQLiteStats::reduceDB(
     , const uint32_t act_ranking
     , const uint32_t tot_cls_in_db
 ) {
+    if (solver->verbosity > 1 )
+        printf("c reduceDB sqlite called for cl %d at confl %lu \n",  cl->stats.ID, solver->conflicts);
     assert(cl->stats.dump_no != std::numeric_limits<uint16_t>::max());
 
     int bindAt = 1;
