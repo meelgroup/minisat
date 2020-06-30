@@ -292,7 +292,7 @@ void Solver::sql_dump_last_in_solver()
         if (cl.stats.ID != 0) {
             if(verbosity > 1)
                 printf("c sql_dump_last_in_solver storing clause %d\n",cl.stats.ID);
-            sqlStats->cl_last_in_solver(this, -1*cl.stats.ID);
+            sqlStats->cl_last_in_solver(this, cl.stats.ID);
             if (drup_debug) { fprintf(drup_file, "[sql-dump] ID : %d  confl : %lu [last_in_solver]\n", cl.stats.ID, conflicts); }
 
         }
@@ -916,8 +916,16 @@ void Solver::reduceDB()
 
 #ifdef STATS_MODE
     dump_sql_cl_data();
-    printf("c Clauses locked for data generation %lu (%4.2f %% of learnt clauses) \n",
-           num_locked_for_data_gen, 100.0 * (float)num_locked_for_data_gen / nLearnts());
+    printf("c Clauses locked for data generation %lu (%4.2f %% of learnt clauses [%d]) \n",
+           num_locked_for_data_gen, 100.0 * (float)num_locked_for_data_gen / nLearnts(),nLearnts());
+     if (verbosity > 1 ){
+        printf("c Clauses in Database now : \n");
+        for (int li = 0; li < learnts.size(); li++) {
+            Clause& c = ca[learnts[li]];
+            if (c.stats.ID > 0) printf(" %d", c.stats.ID);
+        }
+        printf(" \n");
+    }
 #endif
 
     sort(learnts, reduceDB_lt(ca));
@@ -928,12 +936,12 @@ void Solver::reduceDB()
         if (c.size() > 2 && !locked(c) &&
             (i < learnts.size() / 2 || c.activity() < extra_lim)) {
             if (drup_debug) { fprintf(drup_file, "[reduceDB] "); }
-            if(verbosity > 1 && c.stats.ID) printf("c ReduceDB removing : %d \n", c.stats.ID);
+            if(verbosity > 1 && c.stats.ID > 0) printf("c ReduceDB removing : %d \n", c.stats.ID);
             removeClause(learnts[i]);
             num_removed_clauses++;
         } else{
             learnts[j++] = learnts[i];
-            if(verbosity > 1) printf("c ReduceDB not removing : %d \n", c.stats.ID);
+            // if(verbosity > 1) printf("c ReduceDB not removing : %d \n", c.stats.ID);
 
         }
         c.stats.dump_no++;
@@ -950,6 +958,7 @@ void Solver::removeSatisfied(vec<CRef>& cs)
     for (i = j = 0; i < cs.size(); i++) {
         Clause& c = ca[cs[i]];
         if (satisfied(c)){
+            if (verbosity > 1 && c.stats.ID > 0) printf("c Removing satisfied : %d \n", c.stats.ID);
             if (drup_debug) { fprintf(drup_file, "[removeSatisfied] "); }
             removeClause(cs[i]);
         }
@@ -1503,11 +1512,15 @@ void Solver::relocAll(ClauseAllocator& to)
     // All learnt:
     //
     int i, j;
-    for (i = j = 0; i < learnts.size(); i++)
+    for (i = j = 0; i < learnts.size(); i++){
         if (!isRemoved(learnts[i])) {
             ca.reloc(learnts[i], to);
             learnts[j++] = learnts[i];
+        } else {
+            Clause c =  ca[learnts[i]];
+            if (verbosity > 1 && c.stats.ID > 0) printf("c Removed [relocAll] : %d \n", c.stats.ID);
         }
+    }
     learnts.shrink(i - j);
 
     // All original:
