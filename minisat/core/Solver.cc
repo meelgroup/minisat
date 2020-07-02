@@ -246,7 +246,7 @@ void Solver::dump_sql_cl_data()
         }
 
         const bool locked = true; // TODO clause_locked(*cl, offs);l
-        const uint32_t act_ranking_top_10 = std::ceil((double)i / ((double)learnts.size() / 10.0));
+        const uint32_t act_ranking_top_10 = std::ceil((double)i / ((double)learnts.size() / 10.0)) + 1;
         //cout << "Ranking top 10: " << act_ranking_top_10 << " act: " << cl->stats.activity << endl;
         sqlStats->reduceDB(
             this
@@ -285,8 +285,8 @@ void Solver::sql_dump_last_in_solver()
 {
     if (!sqlStats)
         return;
-    // if(verbosity > 1)
-    printf("c caling sql_dump_last_in_solver. learnt size now : %d \n", learnts.size());
+    if(verbosity > 1)
+        printf("c caling sql_dump_last_in_solver. learnt size now : %d \n", learnts.size());
     for(int i = 0; i < learnts.size(); i++) {
         Clause& cl = ca[learnts[i]];
         if (cl.stats.ID != 0) {
@@ -912,12 +912,11 @@ void Solver::reduceDB()
 {
     int i, j;
     double extra_lim = cla_inc / learnts.size(); // Remove any clause below this activity
-    printf("c ReduceDB called \n");
 
 #ifdef STATS_MODE
     dump_sql_cl_data();
-    printf("c Clauses locked for data generation %lu (%4.2f %% of learnt clauses [%d]) \n",
-           num_locked_for_data_gen, 100.0 * (float)num_locked_for_data_gen / nLearnts(),nLearnts());
+    printf("c [reduceDB] locked for data generation %lu (%4.2f %%)",
+           num_locked_for_data_gen, 100.0 * (float)num_locked_for_data_gen / nLearnts());
      if (verbosity > 1 ){
         printf("c Clauses in Database now : \n");
         for (int li = 0; li < learnts.size(); li++) {
@@ -944,11 +943,11 @@ void Solver::reduceDB()
             // if(verbosity > 1) printf("c ReduceDB not removing : %d \n", c.stats.ID);
 
         }
-        c.stats.dump_no++;
-        c.stats.reset_rdb_stats();
+        // c.stats.dump_no++;
+        // c.stats.reset_rdb_stats();
     }
     learnts.shrink(i - j);
-    printf("c reduceDB reduced : %d \n", i-j);
+    printf(" reduced : %d  clauses\n", i-j);
     checkGarbage();
 }
 
@@ -1327,7 +1326,8 @@ lbool Solver::solve_()
         double rest_base =
             luby_restart ? luby(restart_inc, curr_restarts) : pow(restart_inc, curr_restarts);
         status = search(rest_base * restart_first);
-        printf("c learnt size now : %d  [luby %d ]\n", learnts.size(),curr_restarts);
+        if(verbosity > 1)
+            printf("c learnt size now : %d  [luby %d ]\n", learnts.size(),curr_restarts);
 
         if (!withinBudget())
             break;

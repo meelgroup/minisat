@@ -338,6 +338,7 @@ class Clause
     Clause(const Clause& from, bool use_extra)
     {
         header = from.header;
+        stats = from.stats;
         header.has_extra = use_extra; // NOTE: the copied clause may lose the extra field.
 
         for (int i = 0; i < from.size(); i++)
