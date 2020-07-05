@@ -284,8 +284,8 @@ struct ClauseStats {
         // ttl = 0;
         used_for_uip_creation = 0;
         propagations_made = 0;
-        // clause_looked_at = 0;
-        // conflicts_made = 0;
+        clause_looked_at = 0;
+        conflicts_made = 0;
     }
 };
 

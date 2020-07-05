@@ -237,7 +237,7 @@ void Solver::dump_sql_cl_data()
     // TODO : it is assumed that learnts is already sorted
 
     for (int i = 0; i < learnts.size(); i++) {
-        //         ClOffset offs = all_learnt[i];
+
         Clause& cl = ca[learnts[i]];
 
         //Only if selected to be dumped
@@ -245,8 +245,8 @@ void Solver::dump_sql_cl_data()
             continue;
         }
 
-        const bool locked = true; // TODO clause_locked(*cl, offs);l
-        const uint32_t act_ranking_top_10 = std::ceil((double)i / ((double)learnts.size() / 10.0)) + 1;
+        bool locked = true;  // are not they all locked ?
+        const uint32_t act_ranking_top_10 = std::ceil((double)(i+1) / ((double)learnts.size() / 10.0));
         //cout << "Ranking top 10: " << act_ranking_top_10 << " act: " << cl->stats.activity << endl;
         sqlStats->reduceDB(
             this
@@ -571,9 +571,10 @@ void Solver::analyze(CRef confl, vec<Lit>& out_learnt, int& out_btlevel, unsigne
     do {
         assert(confl != CRef_Undef); // (otherwise should be UIP)
         Clause& c = ca[confl];
-        c.stats.last_touched = conflicts; // TODO : correct? also the two below?
+
         c.stats.sum_uip1_used++;
         c.stats.used_for_uip_creation++;
+        c.stats.last_touched = conflicts;
 
         if (c.learnt())
             claBumpActivity(c);
@@ -800,14 +801,14 @@ CRef Solver::propagate()
             // Make sure the false literal is data[1]:
             CRef cr = i->cref;
             Clause& c = ca[cr];
+
+            c.stats.clause_looked_at++;
+
             Lit false_lit = ~p;
             if (c[0] == false_lit)
                 c[0] = c[1], c[1] = false_lit;
             assert(c[1] == false_lit);
             i++;
-            c.stats.propagations_made++;     // TODO : correct?
-            c.stats.sum_propagations_made++; // TODO : correct?
-            c.stats.rdb1_propagations_made++;
 
             // If 0th watch is true, then clause is already satisfied.
             Lit first = c[0];
@@ -827,6 +828,10 @@ CRef Solver::propagate()
                 }
 
             // Did not find watch -- clause is unit under assignment:
+
+            c.stats.propagations_made++;
+            c.stats.sum_propagations_made++;
+
             *j++ = w;
             if (value(first) == l_False) {
                 confl = cr;
@@ -1109,6 +1114,7 @@ lbool Solver::search(int nof_conflicts)
     for (;;) {
         old_decision_level = decisionLevel(); // TODO correct?
         CRef confl = propagate();
+
         if (confl != CRef_Undef) {
             // CONFLICT
             conflicts++;
@@ -1120,6 +1126,7 @@ lbool Solver::search(int nof_conflicts)
                 return l_False;
 
             learnt_clause.clear();
+            ca[confl].stats.conflicts_made++;
             analyze(confl, learnt_clause, backtrack_level, glue, glue_before_minim);
             learnt_cl_size = learnt_clause.size();
             cancelUntil(backtrack_level);
