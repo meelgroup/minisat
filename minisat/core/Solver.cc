@@ -66,7 +66,9 @@ static DoubleOption opt_garbage_frac(
     DoubleRange(0, false, HUGE_VAL, false));
 static IntOption opt_min_learnts_lim(_cat, "min-learnts", "Minimum learnt clause limit", 0,
                                      IntRange(0, INT32_MAX));
-
+static IntOption opt_reducedb_confl(_cat, "rdb-at",
+                "k : Call reduceDB at each k conflict. 0=use minisat strategy", 0,
+                                     IntRange(0, INT32_MAX));
 //=================================================================================================
 // Constructor/Destructor:
 
@@ -90,7 +92,8 @@ Solver::Solver()
       garbage_frac(opt_garbage_frac),
       min_learnts_lim(opt_min_learnts_lim),
       restart_first(opt_restart_first),
-      restart_inc(opt_restart_inc)
+      restart_inc(opt_restart_inc),
+      reduceDB_at_confl(opt_reducedb_confl)
 
       // Parameters (the rest):
       //
@@ -892,7 +895,7 @@ lbool Solver::search(int nof_conflicts)
             if (decisionLevel() == 0 && !simplify())
                 return l_False;
 
-            if (learnts.size() - nAssigns() >= max_learnts)
+            if (reduceDB_needed())
                 // Reduce the set of learnt clauses:
                 reduceDB();
 

@@ -158,6 +158,7 @@ class Solver
     int restart_first; // The initial restart limit.                                                                (default 100)
     double
         restart_inc; // The factor with which the restart limit is multiplied in each restart.                    (default 1.5)
+    int reduceDB_at_confl; // Fix reduceDB calling frequency at each this many conflicts
     double
         learntsize_factor; // The intitial limit for learnt clauses is a factor of the original clauses.                (default 1 / 3)
     double
@@ -345,6 +346,7 @@ class Solver
     int level(Var x) const;
     double progressEstimate() const; // DELETE THIS ?? IT'S NOT VERY USEFUL ...
     bool withinBudget() const;
+    bool reduceDB_needed();
     void relocAll(ClauseAllocator& to);
 
 #ifdef BIN_DRUP
@@ -625,6 +627,21 @@ inline bool Solver::withinBudget() const
 {
     return !asynch_interrupt && (conflict_budget < 0 || conflicts < (uint64_t)conflict_budget) &&
            (propagation_budget < 0 || propagations < (uint64_t)propagation_budget);
+}
+
+inline bool Solver::reduceDB_needed()
+{
+    if (reduceDB_at_confl == 0){
+        if(learnts.size() - nAssigns() >= max_learnts)
+            return true;
+        else
+            return false;
+    }
+    if(conflicts - reducedb_last_confl >= reduceDB_at_confl)
+        return true;
+    else
+        return false;
+
 }
 
 // FIXME: after the introduction of asynchronous interrruptions the solve-versions that return a
