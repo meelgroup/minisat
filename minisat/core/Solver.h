@@ -141,6 +141,7 @@ class Solver
     //
     FILE* drup_file;
     int verbosity;
+    int show_info;
     double var_decay;
     double clause_decay;
     double random_var_freq;
@@ -170,6 +171,9 @@ class Solver
     uint64_t solves, starts, decisions, rnd_decisions, propagations, conflicts;
     uint64_t dec_vars, num_clauses, num_learnts, clauses_literals, learnts_literals, max_literals,
         tot_literals;
+
+    uint64_t reduceDB_call;  // current reduceDB call number
+    uint64_t reducedb_last_confl;  // reduceDB called last time at this restart
 
    protected:
     // Helper structures:

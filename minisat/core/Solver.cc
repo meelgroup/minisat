@@ -77,6 +77,7 @@ Solver::Solver()
       //
       drup_file(NULL),
       verbosity(0),
+      show_info(0),
       var_decay(opt_var_decay),
       clause_decay(opt_clause_decay),
       random_var_freq(opt_random_var_freq),
@@ -118,8 +119,10 @@ Solver::Solver()
       clauses_literals(0),
       learnts_literals(0),
       max_literals(0),
-      tot_literals(0)
+      tot_literals(0),
 
+      reduceDB_call(0),
+      reducedb_last_confl(0)
       ,
       watches(WatcherDeleted(ca)),
       order_heap(VarOrderLt(activity)),
@@ -684,6 +687,12 @@ void Solver::reduceDB()
         else
             learnts[j++] = learnts[i];
     }
+    if (show_info == 1){
+        reduceDB_call++;
+        // printf("c [reduceDB] #reduceDB_call | conflict | conflict_diff | restart | learnts_size | extra_lim | max_learnts ");
+        printf("c [reduceDB] %lu | %lu | %lu |  %lu | %d | %.2e | %.0f | %d \n", reduceDB_call, conflicts, (conflicts - reducedb_last_confl), starts, learnts.size(), extra_lim, max_learnts, i-j);
+        reducedb_last_confl = conflicts;
+    }
     learnts.shrink(i - j);
     checkGarbage();
 }
@@ -863,7 +872,7 @@ lbool Solver::search(int nof_conflicts)
                 learntsize_adjust_cnt = (int)learntsize_adjust_confl;
                 max_learnts *= learntsize_inc;
 
-                if (verbosity >= 1)
+                if (verbosity >= 1 && show_info != 1)
                     printf("| %9d | %7d %8d %8d | %8d %8d %6.0f | %6.3f %% |\n", (int)conflicts,
                            (int)dec_vars - (trail_lim.size() == 0 ? trail.size() : trail_lim[0]),
                            nClauses(), (int)clauses_literals, (int)max_learnts, nLearnts(),
@@ -986,6 +995,12 @@ lbool Solver::solve_()
         printf("| Conflicts |          ORIGINAL         |          LEARNT          | Progress |\n");
         printf("|           |    Vars  Clauses Literals |    Limit  Clauses Lit/Cl |          |\n");
         printf("===============================================================================\n");
+        if (show_info == 1){
+            printf("c  #  RDB_call | conflict  |  restart |    extra_lim   | reduced  \n");
+            printf("c              | confl_bet | lernt_sz |   max_learnts  | clauses \n");
+
+        }
+
     }
 
     // Search:
