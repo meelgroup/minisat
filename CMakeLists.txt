@@ -55,7 +55,7 @@ add_executable(minisat_simp minisat/simp/Main.cc)
 
 if(STATIC_BINARIES)
   target_link_libraries(minisat_core minisat-lib-static)
-  target_link_libraries(minisat_simp minisat-lib-static)
+  target_link_libraries(minisat_simp minisat-lib-static -static)
 else()
   target_link_libraries(minisat_core minisat-lib-shared)
   target_link_libraries(minisat_simp minisat-lib-shared)
