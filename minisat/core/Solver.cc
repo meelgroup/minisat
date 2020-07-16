@@ -1223,13 +1223,14 @@ lbool Solver::search(int nof_conflicts)
             if (decisionLevel() == 0 && !simplify())
                 return l_False;
 
-            if (learnts.size() - nAssigns() >= max_learnts) {
+            if (conflicts >= last_conflicts+10000) {
                 // Reduce the set of learnt clauses:
 #ifdef PREDICT_MODE
                 reduceDB_ml();
 #else
                 reduceDB();
 #endif
+                last_conflicts = conflicts;
             }
             Lit next = lit_Undef;
             while (decisionLevel() < assumptions.size()) {

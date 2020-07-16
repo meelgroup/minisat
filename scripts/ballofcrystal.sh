@@ -117,7 +117,6 @@ rm -f ../../minisat/predict/*
 # =============================================================================
 
 (
-cd "$FNAME-dir"
-../minisat "../$FNAME" | tee minisat-final-run.out
+./minisat "./$FNAME" | tee $FNAME-dir/minisat-final-run.out
 )
 exit
