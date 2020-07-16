@@ -232,14 +232,14 @@ void Solver::dump_sql_cl_data()
         }
 
         bool locked = true;  // are not they all locked ?
-        const uint32_t act_ranking_top_10 = std::ceil((double)(i+1) / ((double)learnts.size() / 10.0));
+        const uint32_t act_ranking_top_10 = std::ceil((double)(i) / ((double)learnts.size() / 10.0));
         //cout << "Ranking top 10: " << act_ranking_top_10 << " act: " << cl->stats.activity << endl;
         sqlStats->reduceDB(
             this
             , locked
             , &cl
             , act_ranking_top_10
-            , i+1
+            , i
             , learnts.size()
             //, learnt_clause.size()
         );
@@ -880,7 +880,7 @@ void Solver::reduceDB_ml()
     sort(learnts, reduceDB_lt(ca));
     for (i = j = 0; i < learnts.size(); i++) {
         const uint32_t act_ranking_top_10 =
-            std::ceil((double)i / ((double)learnts.size() / 10.0)) + 1;
+            std::ceil((double)i / ((double)learnts.size() / 10.0));
         double act_ranking_rel = (double)i / (double)learnts.size();
 
         Clause& c = ca[learnts[i]];
