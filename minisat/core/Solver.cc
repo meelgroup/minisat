@@ -912,8 +912,7 @@ void Solver::reduceDB_ml()
             // if(verbosity > 1) printf("c ReduceDB not removing : %d \n", c.stats.ID);
 
         }
-        // c.stats.dump_no++;
-        // c.stats.reset_rdb_stats();
+        c.stats.reset_rdb_stats();
     }
     learnts.shrink(i - j);
     //printf(" reduced : %d  clauses\n", i-j);
@@ -956,8 +955,6 @@ void Solver::reduceDB()
             // if(verbosity > 1) printf("c ReduceDB not removing : %d \n", c.stats.ID);
 
         }
-        // c.stats.dump_no++;
-        // c.stats.reset_rdb_stats();
     }
     learnts.shrink(i - j);
     printf(" reduced : %d  clauses\n", i-j);
