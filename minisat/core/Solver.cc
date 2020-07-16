@@ -864,7 +864,7 @@ struct reduceDB_pred {
     }
     bool operator()(CRef x, CRef y)
     {
-        return ca[x].size() > 2 && (ca[y].size() == 2 || ca[x].stats.pred < ca[y].stats.pred);
+        return ca[x].stats.pred < ca[y].stats.pred;
     }
 };
 
@@ -878,7 +878,6 @@ void Solver::reduceDB_ml()
     // -- Remove any clause below this activity
 
     sort(learnts, reduceDB_lt(ca));
-
     for (i = j = 0; i < learnts.size(); i++) {
         const uint32_t act_ranking_top_10 =
             std::ceil((double)i / ((double)learnts.size() / 10.0)) + 1;
@@ -897,6 +896,8 @@ void Solver::reduceDB_ml()
     }
 
     sort(learnts, reduceDB_pred(ca));
+    uint32_t x = 0;
+    uint32_t toremove = learnts.size() / 2;
     for (i = j = 0; i < learnts.size(); i++) {
         Clause& c = ca[learnts[i]];
         uint64_t time_inside_solver = conflicts - c.stats.introduced_at_conflict;
@@ -904,16 +905,18 @@ void Solver::reduceDB_ml()
         if (time_inside_solver > 10000 &&
             c.size() > 2 &&
             !locked(c) &&
-            i < learnts.size() / 2)
+            toremove > 0)
         {
             if(verbosity > 1 && c.stats.ID > 0) printf("c ReduceDB removing : %d \n", c.stats.ID);
             removeClause(learnts[i]);
             num_removed_clauses++;
+            toremove--;
         } else{
             learnts[j++] = learnts[i];
             // if(verbosity > 1) printf("c ReduceDB not removing : %d \n", c.stats.ID);
 
         }
+
         c.stats.dump_no++;
         c.stats.reset_rdb_stats();
     }
@@ -948,7 +951,8 @@ void Solver::reduceDB()
     for (i = j = 0; i < learnts.size(); i++) {
         Clause& c = ca[learnts[i]];
         if (c.size() > 2 && !locked(c) &&
-            (i < learnts.size() / 2 || c.activity() < extra_lim)) {
+            (i < learnts.size() / 2 || c.activity() < extra_lim))
+        {
             if (drup_debug) { fprintf(drup_file, "[reduceDB] "); }
             if(verbosity > 1 && c.stats.ID > 0) printf("c ReduceDB removing : %d \n", c.stats.ID);
             removeClause(learnts[i]);
