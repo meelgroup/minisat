@@ -881,7 +881,7 @@ void Solver::reduceDB_ml()
     for (i = j = 0; i < learnts.size(); i++) {
         const uint32_t act_ranking_top_10 =
             std::ceil((double)i / ((double)learnts.size() / 10.0)) + 1;
-        double act_ranking_rel = ((double)i + 1) / (double)learnts.size();
+        double act_ranking_rel = (double)i / (double)learnts.size();
         assert(act_ranking_rel != 0);
 
         Clause& c = ca[learnts[i]];
