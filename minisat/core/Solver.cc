@@ -245,6 +245,7 @@ void Solver::dump_sql_cl_data()
         );
         added_to_db++;
         cl.stats.dump_no++;
+        cl.stats.rdb1_propagations_made = cl.stats.propagations_made;
         cl.stats.reset_rdb_stats();
     }
     sqlStats->end_transaction();
@@ -897,13 +898,15 @@ void Solver::reduceDB_ml()
     }
 
     sort(learnts, reduceDB_pred(ca));
-    // Don't delete binary or locked clauses. From the rest, delete clauses from the first half
-    // and clauses with activity smaller than 'extra_lim':
     for (i = j = 0; i < learnts.size(); i++) {
         Clause& c = ca[learnts[i]];
-        if (c.size() > 2 && !locked(c) &&
-            i < learnts.size() / 2) {
-            if (drup_debug) { fprintf(drup_file, "[reduceDB] "); }
+        uint64_t time_inside_solver = conflicts - c.stats.introduced_at_conflict;
+
+        if (time_inside_solver > 10000 &&
+            c.size() > 2 &&
+            !locked(c) &&
+            i < learnts.size() / 2)
+        {
             if(verbosity > 1 && c.stats.ID > 0) printf("c ReduceDB removing : %d \n", c.stats.ID);
             removeClause(learnts[i]);
             num_removed_clauses++;
@@ -912,6 +915,7 @@ void Solver::reduceDB_ml()
             // if(verbosity > 1) printf("c ReduceDB not removing : %d \n", c.stats.ID);
 
         }
+        c.stats.dump_no++;
         c.stats.reset_rdb_stats();
     }
     learnts.shrink(i - j);

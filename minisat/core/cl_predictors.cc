@@ -88,10 +88,10 @@ void ClPredictors::set_up_input(const Clause* cl,
     {
         at[x++] = MISSING_VAL;
     } else {
-        at[x++] = ((double)(cl->stats.propagations_made + cl->stats.rdb1_propagations_made)) /
+        at[x++] = ((double)(cl->stats.propagations_made)) /
               ::log2(cl->stats.orig_glue);
     }
-    //((rdb0.propagations_made+rdb1.propagations_made)/log2(cl.orig_glue))
+    //((rdb0.propagations_made)/log2(cl.orig_glue))
 
 
     //prevent divide by zero
