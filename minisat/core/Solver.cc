@@ -158,15 +158,24 @@ Solver::Solver()
 
       //Predict system
       ,
-      pred_conf_short("../minisat/predict/predictor_short.boost"),
-      pred_conf_long("../minisat/predict/predictor_long.boost"),
+      pred_conf_short("../minisat/predict/predictor_short.json"),
+      pred_conf_long("../minisat/predict/predictor_long.json"),
       pred_keep_above(0.5f)
 {
     MYFLAG = 0;
+    #ifdef PREDICT_MODE
+    if (predictors == NULL) {
+        predictors = new ClPredictors(this);
+        predictors->load_models(pred_conf_short, pred_conf_long);
+    }
+    #endif
 }
 
 Solver::~Solver()
 {
+    #ifdef PREDICT_MODE
+    delete predictors;
+    #endif
 }
 
 // Setting up SQLite
@@ -863,19 +872,25 @@ struct reduceDB_lt {
     }
 };
 
+struct reduceDB_pred {
+    ClauseAllocator& ca;
+    reduceDB_pred(ClauseAllocator& ca_) : ca(ca_)
+    {
+    }
+    bool operator()(CRef x, CRef y)
+    {
+        return ca[x].size() > 2 && (ca[y].size() == 2 || ca[x].stats.pred < ca[y].stats.pred);
+    }
+};
+
 #ifdef PREDICT_MODE
 void Solver::reduceDB_ml()
 {
     int i, j;
-    printf("c ReduceDB_ml called\n");
+    //printf("c ReduceDB_ml called\n");
     // TODO : i want to replace pred_keep_above with extra_lim sometime
     // double extra_lim = cla_inc / learnts.size();
     // -- Remove any clause below this activity
-
-    if (predictors == NULL) {
-        predictors = new ClPredictors(this);
-        predictors->load_models(pred_conf_short, pred_conf_long);
-    }
 
     sort(learnts, reduceDB_lt(ca));
 
@@ -887,20 +902,36 @@ void Solver::reduceDB_ml()
 
         Clause& c = ca[learnts[i]];
         int64_t last_touched_diff = (int64_t)conflicts - (int64_t)c.stats.last_touched;
+        c.stats.pred = predictors->predict_short(
+            &c,
+            conflicts,
+            last_touched_diff,
+            act_ranking_rel,
+            act_ranking_top_10
+        );
+    }
 
+    sort(learnts, reduceDB_pred(ca));
+    // Don't delete binary or locked clauses. From the rest, delete clauses from the first half
+    // and clauses with activity smaller than 'extra_lim':
+    for (i = j = 0; i < learnts.size(); i++) {
+        Clause& c = ca[learnts[i]];
         if (c.size() > 2 && !locked(c) &&
-            predictors->predict_short(&c, conflicts, last_touched_diff, act_ranking_rel,
-                                      act_ranking_top_10) < pred_keep_above) {
+            i < learnts.size() / 2) {
+            if (drup_debug) { fprintf(drup_file, "[reduceDB] "); }
+            if(verbosity > 1 && c.stats.ID > 0) printf("c ReduceDB removing : %d \n", c.stats.ID);
             removeClause(learnts[i]);
             num_removed_clauses++;
-        } else
+        } else{
             learnts[j++] = learnts[i];
+            // if(verbosity > 1) printf("c ReduceDB not removing : %d \n", c.stats.ID);
 
-        c.stats.rdb1_propagations_made = c.stats.propagations_made;
-        c.stats.reset_rdb_stats();
+        }
+        // c.stats.dump_no++;
+        // c.stats.reset_rdb_stats();
     }
     learnts.shrink(i - j);
-
+    //printf(" reduced : %d  clauses\n", i-j);
     checkGarbage();
 }
 #endif
