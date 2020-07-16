@@ -229,9 +229,6 @@ bool SimpSolver::strengthenClause(CRef cr, Lit l)
     // FIX: this is too inefficient but would be nice to have (properly implemented)
     // if (!find(subsumption_queue, &c))
     subsumption_queue.insert(cr);
-    printf("c strengthening\n");
-
-
 
     if (drup_file) {
         if(drup_debug) {fprintf(drup_file, "[strengthenClause] ");}
