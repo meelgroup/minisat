@@ -40,6 +40,9 @@ import sklearn.ensemble
 import sklearn.linear_model
 import helper
 import xgboost as xgb
+import ast
+import functools
+import crystalcodegen as ccg
 try:
     import mlflow
 except ImportError:
@@ -53,18 +56,19 @@ if int(ver[1]) < 20:
 else:
     from sklearn.model_selection import train_test_split
 
+MISSING=np.nan
 
 def check_long_short():
-    if options.longsh is None:
-        print("ERROR: You must give option '--name' as 'short' or 'long'")
+    if options.tier is None:
+        print("ERROR: You must give option '--tier' as short/long/forever")
         assert False
         exit(-1)
 
 
 class Learner:
-    def __init__(self, df, longsh):
+    def __init__(self, df, tier):
         self.df = df
-        self.longsh = longsh
+        self.tier = tier
 
     def count_bad_ok(self, df):
         files = df[["x.class", "rdb0.dump_no"]].groupby("x.class").count()
@@ -104,7 +108,11 @@ class Learner:
             print("\nCalculating confusion matrix -- ALL dump_no")
             data2 = data
 
-        return helper.conf_matrixes(data2, features, to_predict, clf, toprint,
+        if False:
+            return helper.conf_matrixes(data2, features, to_predict, clf, toprint,
+                                    highlight=highlight)
+        else:
+            return helper.calc_regression_error(data2, features, to_predict, clf, toprint,
                                     highlight=highlight)
 
     @staticmethod
@@ -130,39 +138,49 @@ class Learner:
 
         return x
 
+    def importance_XGB(self, clf, features):
+        impdf = []
+        #print("clf:", clf)
+        #print("clf-booster:", clf.feature_importances_)
+
+        for i in range(len(clf.feature_importances_)):
+            score = clf.feature_importances_[i]
+            ft = features[i]
+            impdf.append({'feature': ft, 'importance': score})
+        impdf = pd.DataFrame(impdf)
+        impdf = impdf.sort_values(by='importance', ascending=False).reset_index(drop=True)
+        impdf['importance'] /= impdf['importance'].sum()
+        pd.set_option('display.max_rows', None)
+        pd.set_option('display.max_columns', None)
+        pd.set_option('display.width', None)
+        pd.set_option('display.max_colwidth', None)
+        print("impdf:", impdf)
+
+        return impdf
+
     def one_classifier(self, features, to_predict, final):
         print("-> Number of features  :", len(features))
         print("-> Number of datapoints:", self.df.shape)
         print("-> Predicting          :", to_predict)
-
-        # get smaller part to work on
-        # also, copy it so we don't get warning about setting a slice of a DF
-        if options.only_perc >= 0.98:
-            df = self.df.copy()
-        else:
-            df_tmp = self.df.sample(frac=options.only_perc, random_state=prng)
-            df = df_tmp.copy()
-            print("-> Number of datapoints after applying '--only':", df.shape)
+        df = self.df.copy()
 
         if options.check_row_data:
             helper.check_too_large_or_nan_values(df, features)
 
         # count bad and ok
-        bad,ok = self.count_bad_ok(df)
-        print("Number of BAD  elements        : %-6d" % bad)
-        print("Number of OK   elements        : %-6d" % ok)
-
+        #bad,ok = self.count_bad_ok(df)
+        #print("Number of BAD  elements        : %-6d" % bad)
+        #print("Number of OK   elements        : %-6d" % ok)
         # balance it out
-        prefer_ok = float(bad)/float(ok)
-        print("Balanced OK preference would be: %-6.3f" % prefer_ok)
-
+        #prefer_ok = float(bad)/float(ok)
+        #print("Balanced OK preference would be: %-6.3f" % prefer_ok)
         # apply inbalance from option given
-        prefer_ok *= options.prefer_ok
-        print("Option to prefer OK is set to  : %-6.3f" % options.prefer_ok)
-        print("Final OK preference is         : %-6.3f" % prefer_ok)
-        print("Value distribution of 'dump_no':\n%s" % df["rdb0.dump_no"].value_counts())
+        #prefer_ok *= options.prefer_ok
+        #print("Option to prefer OK is set to  : %-6.3f" % options.prefer_ok)
+        #print("Final OK preference is         : %-6.3f" % prefer_ok)
 
-        #train, test = train_test_split(df[df["rdb0.dump_no"] == 1], test_size=0.33, random_state=prng)
+        print("Value distribution of 'dump_no':\n%s" % df["rdb0.dump_no"].value_counts())
+        print("Value distribution of to_predict:\n%s" % df[to_predict].value_counts())
         train, test = train_test_split(df, test_size=0.33, random_state=prng)
 
         X_train = train[features]
@@ -191,8 +209,9 @@ class Learner:
             clf_logreg = sklearn.linear_model.LogisticRegression(
                 C=0.3,
                 random_state=prng)
-            clf_forest = sklearn.ensemble.RandomForestClassifier(
+            clf_forest = sklearn.ensemble.RandomForestRegressor(
                 n_estimators=options.num_trees,
+                max_features="sqrt",
                 #min_samples_leaf=split_point,
                 random_state=prng)
 
@@ -205,7 +224,7 @@ class Learner:
             elif options.final_is_forest:
                 clf = clf_forest
             elif options.final_is_xgboost:
-                clf = xgb.XGBRegressor(objective ='binary:logistic')
+                clf = xgb.XGBRegressor(objective='reg:squarederror', missing=MISSING)
             elif options.final_is_voting:
                 mylist = [["forest", clf_forest], [
                     "svm", clf_svm], ["logreg", clf_logreg]]
@@ -215,8 +234,8 @@ class Learner:
                     "ERROR: You MUST give one of: tree/forest/svm/logreg/voting classifier")
                 exit(-1)
         else:
-            assert options.final_is_forest, "For TOP calculation, we must have --forest"
-            clf_forest = sklearn.ensemble.RandomForestClassifier(
+            assert options.final_is_forest or options.final_is_xgboost, "For TOP calculation, we must have --forest or --xgboost"
+            clf_forest = sklearn.ensemble.RandomForestRegressor(
                 n_estimators=options.num_trees*5,
                 max_features="sqrt",
                 random_state=prng)
@@ -224,16 +243,17 @@ class Learner:
             clf = clf_forest
 
         del df
-        my_sample_w = np.array(y_train.values)
-        my_sample_w = my_sample_w*prefer_ok
-        def zero_to_one(t):
-            if t == 0:
-                return 1
-            else:
-                return t
-        vfunc = np.vectorize(zero_to_one)
-        my_sample_w = vfunc(my_sample_w)
-        clf.fit(X_train, y_train, sample_weight=my_sample_w)
+        #my_sample_w = np.array(y_train.values)
+        #my_sample_w = my_sample_w*prefer_ok
+        #def zero_to_one(t):
+            #if t == 0:
+                #return 1
+            #else:
+                #return t
+        #vfunc = np.vectorize(zero_to_one)
+        #my_sample_w = vfunc(my_sample_w)
+        #clf.fit(X_train, y_train, sample_weight=my_sample_w)
+        clf.fit(X_train, y_train)
 
         print("Training finished. T: %-3.2f" % (time.time() - t))
 
@@ -243,15 +263,6 @@ class Learner:
                 # mlflow.log_metric("all features: ", train.columns.values.flatten().tolist())
                 mlflow.log_metric("train num rows", train.shape[0])
                 mlflow.log_metric("test num rows", test.shape[0])
-
-            if options.final_is_forest:
-                best_features = helper.print_feature_ranking(
-                    clf, X_train,
-                    top_num_features=options.top_num_features,
-                    features=features,
-                    plot=options.show)
-            else:
-                best_features = None
 
             #mlflow.log_artifact("best_features", best_features)
         else:
@@ -266,40 +277,53 @@ class Learner:
 
             if options.basedir and options.final_is_xgboost:
                 booster = clf.get_booster()
-                fname = options.basedir + "/predictor_{longsh}.boost".format(
-                    longsh=self.longsh)
+                fname = options.basedir + "/predictor_{name}.json".format(
+                    name=options.name)
                 booster.save_model(fname)
+                print("==> Saved model to: ", fname)
             else:
-                print("NOT writing code")
+                print("WARNING: NOT writing code -- you must use xgboost and give dir for that")
 
+
+        # print feature rankings
+        if options.final_is_forest:
+            helper.print_feature_ranking(
+                clf, X_train,
+                top_num_features=200,
+                features=features,
+                plot=options.show)
+        elif options.final_is_xgboost:
+            self.importance_XGB(clf, features=features)
+
+        # print distribution of error
         print("--------------------------")
         print("-       test data        -")
         print("--------------------------")
         for dump_no in [1, 2, 3, 10, 20, 40, None]:
-            prec, recall, acc, roc_auc = self.filtered_conf_matrixes(
+            self.filtered_conf_matrixes(
                 dump_no, test, features, to_predict, clf, "test data", highlight=True)
-
         print("--------------------------------")
         print("--      train+test data        -")
         print("--------------------------------")
         for dump_no in [1, None]:
             self.filtered_conf_matrixes(
                 dump_no, self.df, features, to_predict, clf, "test and train data")
-
         print("--------------------------")
         print("-       train data       -")
         print("--------------------------")
         self.filtered_conf_matrixes(
             dump_no, train, features, to_predict, clf, "train data")
 
+        print("Example data:")
+        #print(test[features+to_predict])
+        #print(test[to_predict])
+        with open("example-data.dat", "wb") as f:
+            pickle.dump(test[features+[to_predict]], f)
+
+
         # Calculate predicted value for the original dataframe
         y_pred = clf.predict(self.df[features])
-
-        # TODO do principal component analysis
-        if final:
-            return roc_auc, y_pred
-        else:
-            return best_features, y_pred
+        return y_pred
 
     def rem_features(self, feat, to_remove):
         feat_less = list(feat)
@@ -313,45 +337,37 @@ class Learner:
         return feat_less
 
     def learn(self):
-        features = list(self.df)
-        features = self.rem_features(
-            features, ["x.a_num_used", "x.class", "x.a_lifetime", "fname", "sum_cl_use"])
         if options.raw_data_plots:
             pd.options.display.mpl_style = "default"
             self.df.hist()
             self.df.boxplot()
 
         if not options.only_final:
-            # calculate best features
-            top_n_feats, y_pred = self.one_classifier(
-                features, "x.class", final=False)
+            features = list(self.df)
+            features = self.rem_features(
+            features, ["x.class",
+                       "x.a_lifetime",
+                       "fname",
+                       "sum_cl_use.num_used",
+                       "x.sum_cl_use",
+                       "x.used_later_short",
+                       "x.used_later_long",
+                       "x.used_later_forever"])
 
-            if options.get_best_topn_feats is not None:
-                if not options.final_is_forest:
-                    print("ERROR: we can only calculate best features for Forest!")
-                    exit(-1)
-
-                greedy_features = helper.calc_greedy_best_features(
-                    top_n_feats, options.get_best_topn_feats,
-                    self)
-
-                # dump to file
-                with open(options.best_features_fname, "w") as f:
-                    for feat in greedy_features:
-                        f.write("%s\n" % feat)
-                print("Dumped final best selection to file '%s'" %
-                      options.best_features_fname)
+            self.one_classifier(
+                features,
+                "x.used_later_{name}".format(name=options.tier),
+                final=False)
 
         else:
             best_features = helper.get_features(options.best_features_fname)
-            roc_auc, y_pred = self.one_classifier(
-                best_features, "x.class",
+            self.one_classifier(
+                best_features,
+                "x.used_later_{name}".format(name=options.tier),
                 final=True)
 
             if options.show:
                 plt.show()
-
-        return y_pred
 
 
 if __name__ == "__main__":
@@ -367,6 +383,8 @@ if __name__ == "__main__":
                         dest="print_features", help="Print features")
     parser.add_argument("--nocomputed", default=False, action="store_true",
                         dest="no_computed", help="Don't add computed features")
+    parser.add_argument("--allcomputed", default=False, action="store_true",
+                        dest="all_computed", help="Add ALL computed features")
     parser.add_argument("--bestfeatfile", default="../../scripts/best_features.txt", type=str,
                         dest="best_features_fname", help="Name and position of best features file that lists the best features in order")
 
@@ -391,18 +409,14 @@ if __name__ == "__main__":
                         dest="raw_data_plots", help="Display raw data plots")
     parser.add_argument("--basedir", type=str,
                         dest="basedir", help="The base directory of where the CryptoMiniSat source code is")
-    parser.add_argument("--conf", default=0, type=int,
-                        dest="conf_num", help="Which predict configuration this is")
 
     # data filtering
     parser.add_argument("--only", default=1.00, type=float,
                         dest="only_perc", help="Only use this percentage of data")
 
-    # final generator or greedy
+    # final generator top/final
     parser.add_argument("--final", default=False, action="store_true",
                         dest="only_final", help="Only generate final predictor")
-    parser.add_argument("--greedy", default=None, type=int, metavar="TOPN",
-                        dest="get_best_topn_feats", help="Greedy Best K top features from the top N features given by '--top N'")
     parser.add_argument("--top", default=None, type=int, metavar="TOPN",
                         dest="top_num_features", help="Candidates are top N features for greedy selector")
 
@@ -420,13 +434,11 @@ if __name__ == "__main__":
     parser.add_argument("--voting", default=False, action="store_true",
                         dest="final_is_voting", help="Final classifier should be a voting of all of: forest, svm, logreg")
 
-    # classifier options
-    parser.add_argument("--prefok", default=2.0, type=float,
-                        dest="prefer_ok", help="Prefer OK if >1.0, equal weight if = 1.0, prefer BAD if < 1.0")
-
     # which one to generate
+    parser.add_argument("--tier", default=None, type=str,
+                        dest="tier", help="what to predict")
     parser.add_argument("--name", default=None, type=str,
-                        dest="longsh", help="Raw C-like code will be written to this function and file name")
+                        dest="name", help="what file to generate")
 
     options = parser.parse_args()
     prng = np.random.RandomState(options.seed)
@@ -435,8 +447,8 @@ if __name__ == "__main__":
         print("ERROR: You must give the pandas file!")
         exit(-1)
 
-    if options.get_best_topn_feats and options.only_final:
-        print("Can't do both --greedy best and --final")
+    if options.top_num_features and options.only_final:
+        print("Can't do both --top and --final")
         exit(-1)
 
     if options.top_num_features is None and not options.only_final:
@@ -448,12 +460,18 @@ if __name__ == "__main__":
         print("ERROR: '%s' is not a file" % options.fname)
         exit(-1)
 
+    if options.name is None:
+        print("Name was not set with --name, setting it to --tier, i.e. ", options.tier)
+        options.name = options.tier
+
     # ------------
     #  Log all parameters
     # ------------
     if mlflow_avail:
         mlflow.log_param("final", options.only_final)
         if options.only_final:
+            mlflow.log_param("tier", options.tier)
+            mlflow.log_param("name", options.name)
             mlflow.log_param("tree", options.final_is_tree)
             mlflow.log_param("svm", options.final_is_svm)
             mlflow.log_param("logreg", options.final_is_logreg)
@@ -463,8 +481,7 @@ if __name__ == "__main__":
         else:
             mlflow.log_param("top_num_features", options.top_num_features)
 
-        mlflow.log_param("conf_num", options.conf_num)
-        mlflow.log_param("prefer_ok", options.prefer_ok)
+        #mlflow.log_param("prefer_ok", options.prefer_ok)
         mlflow.log_param("only_percentage", options.only_perc)
         mlflow.log_param("min_samples_split", options.min_samples_split)
         mlflow.log_param("tree_depth", options.tree_depth)
@@ -473,38 +490,44 @@ if __name__ == "__main__":
         mlflow.log_artifact(options.fname)
 
     # Read in Pandas Dataframe
+    print("Reading dataframe...")
     df = pd.read_pickle(options.fname)
     df_orig = df.copy()
     if options.print_features:
         for f in sorted(list(df)):
             print(f)
 
+    # get smaller part to work on
+    # also, copy it so we don't get warning about setting a slice of a DF
+    print("Applying only...")
+    df_tmp = df.sample(frac=options.only_perc, random_state=prng)
+    df = pd.DataFrame(df_tmp)
+    print("-> Number of datapoints after applying '--only':", df.shape)
+
     # feature manipulation
     if not options.no_computed:
-        helper.cldata_add_computed_features(df, options.verbose)
-    helper.clear_data_from_str_na(df)
+        if options.all_computed:
+            helper.cldata_add_computed_features(df, options.verbose)
+        else:
+            print("Adding features...")
+            divide = functools.partial(helper.helper_divide, df=df, features=list(df), verb=options.verbose)
+            rdb0_act_ranking_rel = divide("rdb0.act_ranking", "rdb0.tot_cls_in_db", name="rdb0_act_ranking_rel")
+            rdb1_act_ranking_rel = divide("rdb1.act_ranking", "rdb1.tot_cls_in_db", name="rdb1_act_ranking_rel")
+            best_features = helper.get_features(options.best_features_fname)
+            for feat in best_features:
+                toeval = ccg.to_source(ast.parse(feat))
+                print("Adding feature %s as eval %s" % (feat, toeval))
+                df[feat] = eval(toeval)
 
-    # generation
-    learner = Learner(df, longsh=options.longsh)
+    print("Filling NA with MISSING..")
+    df.fillna(MISSING, inplace=True)
+    df.replace(np.NINF, MISSING, inplace=True)
+    df.replace(np.NaN, MISSING, inplace=True)
+    df.replace(np.Infinity, MISSING, inplace=True)
+    df.replace(np.inf, MISSING, inplace=True)
 
-    y_pred = learner.learn()
 
 
-    # Dump the new prediction into the dataframe
-    name = None
-    if options.final_is_logreg:
-        name = "logreg"
-    elif options.final_is_tree:
-        name = "tree"
-    elif options.final_is_forest:
-        name = "forest"
-    else:
-        exit(0)
-
-    cleanname = re.sub(r'\.dat$', '', options.fname)
-    fname = cleanname + "-" + name + ".dat"
-    df_orig[name] = y_pred
-    df_orig[name] = df_orig[name].astype("category").cat.codes
-    with open(fname, "wb") as f:
-        pickle.dump(df_orig, f)
-    print("Enriched data dumped to file %s" % fname)
+    # do the heavy lifting
+    learner = Learner(df, tier=options.tier)
+    learner.learn()

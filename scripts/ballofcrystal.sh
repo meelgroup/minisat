@@ -91,18 +91,18 @@ cp "$FNAMEOUT.db" "$FNAMEOUT-min.db"
 #  Denormalize the data into a Pandas Table, label it and sample it
 # =============================================================================
 
-../gen_pandas.py "${FNAMEOUT}-min.db" --limit "$FIXED" --conf 1-1 ${EXTRA_GEN_PANDAS_OPTS} --toppercentileshort $SHORTPERC --toppercentilelong $LONGPERC
+../cldata_gen_pandas.py "${FNAMEOUT}-min.db" --limit "$FIXED"
 
 mkdir -p ../../minisat/predict
-rm -f ../../minisat/predict/*.h    # should it be .boost?
+rm -f ../../minisat/predict/*
 
 
 # =============================================================================
 #  Create the classifiers
 # =============================================================================
 
-../predict.py "${FNAMEOUT}-min.db-cldata-short-conf-$CONF-pshort$SHORTPERC-plong$LONGPERC.dat" --name short --final --xgboost --basedir ../../minisat/predict --conf $CONF --prefok 2
-../predict.py "${FNAMEOUT}-min.db-cldata-long-conf-$CONF-pshort$SHORTPERC-plong$LONGPERC.dat" --name long --final --xgboost --basedir ../../minisat/predict --conf $CONF --prefok 2
+../cldata_predict.py "${FNAMEOUT}-min.db-cldata-short.dat" --name short --final --xgboost --basedir ../../minisat/predict --tier short
+../cldata_predict.py "${FNAMEOUT}-min.db-cldata-long.dat" --name long --final --xgboost --basedir ../../minisat/predict --tier long
 
 )
 

@@ -86,14 +86,17 @@ class QueryFill (QueryHelper):
         print("indexes created T: %-3.2f s" % (time.time() - t))
 
     def delete_and_create_all(self):
+        tables = ["short", "long", "forever"]
+
         t = time.time()
-        q = """
-        DROP TABLE IF EXISTS `used_later`;
-        DROP TABLE IF EXISTS `used_later_short`;
-        DROP TABLE IF EXISTS `used_later_long`;
-        """
-        for l in q.split('\n'):
-            self.c.execute(l)
+        q = """DROP TABLE IF EXISTS `used_later`;"""
+        self.c.execute(q)
+
+        for table in tables:
+            q = """
+                DROP TABLE IF EXISTS `used_later_{name}`;
+            """
+            self.c.execute(q.format(name=table))
 
         # Create and fill used_later_X tables
         q_create = """
@@ -105,6 +108,7 @@ class QueryFill (QueryHelper):
         );"""
         self.c.execute(q_create.format(name="short"))
         self.c.execute(q_create.format(name="long"))
+        self.c.execute(q_create.format(name="forever"))
 
         # Create used_later table
         t = time.time()
@@ -120,10 +124,10 @@ class QueryFill (QueryHelper):
         create index `used_later_{name}_idx3` on `used_later_{name}` (used_later_{name});
         create index `used_later_{name}_idx1` on `used_later_{name}` (`clauseID`, rdb0conflicts, offset);
         create index `used_later_{name}_idx2` on `used_later_{name}` (`clauseID`, rdb0conflicts, used_later_{name}, offset);"""
-        for l in idxs.format(name="short").split('\n'):
-            self.c.execute(l)
-        for l in idxs.format(name="long").split('\n'):
-            self.c.execute(l)
+
+        for table in tables:
+            for l in idxs.format(name=table).split('\n'):
+                self.c.execute(l)
 
         idxs = """
         create index `used_later_idx3` on `used_later` (`used_later`);
@@ -170,7 +174,9 @@ class QueryFill (QueryHelper):
         self.c.execute(q.format(used_clauses=used_clauses))
         print("used_later filled T: %-3.2f s" % (time.time() - t))
 
-    def fill_used_later_X(self, name, duration, offset=0, used_clauses="used_clauses"):
+    def fill_used_later_X(self, name, duration, offset=0,
+                          used_clauses="used_clauses",
+                          forever=False):
         q_fill = """
         insert into used_later_{name}
         (
@@ -199,15 +205,16 @@ class QueryFill (QueryHelper):
 
         WHERE
         rdb0.clauseID != 0
-        and cl_last_in_solver.conflicts >= (rdb0.conflicts + {duration} + {offset})
+        and (cl_last_in_solver.conflicts >= (rdb0.conflicts + {duration} + {offset})
+        or 1=={forever})
 
         group by rdb0.clauseID, rdb0.conflicts;"""
 
         t = time.time()
         self.c.execute(q_fill.format(
             name=name, used_clauses=used_clauses,
-            duration=duration, offset=offset))
-        print("used_later_%s table dropped, created, filled, indexed T: %-3.2f s" %
+            duration=duration, offset=offset, forever=int(forever)))
+        print("used_later_%s filled T: %-3.2f s" %
               (name, time.time() - t))
 
 
@@ -451,6 +458,48 @@ def calc_min_split_point(df, min_samples_split):
     return split_point
 
 
+def calc_regression_error(data, features, to_predict, clf, toprint,
+                  average="binary", highlight=False):
+    X_data = data[features]
+    y_data = data[to_predict]
+    print("Number of elements:", X_data.shape)
+    if data.shape[0] <= 1:
+        print("Cannot calculate regression error, too few elements")
+        return None
+    y_pred = clf.predict(X_data)
+    main_error = sklearn.metrics.mean_squared_error(y_data, y_pred)
+    print("Mean squared error is: ", main_error)
+
+    for start,end in [(0,10), (1,10), (10, 100), (100, 1000), (1000,10000), (10000, 1000000)]:
+        x = "--> Strata  %10d <= %20s < %10d " % (start, to_predict, end)
+        myfilt = data[(data[to_predict] >= start) & (data[to_predict] < end)]
+        X_data = myfilt[features]
+        y_data = myfilt[to_predict]
+        y = " -- elements: {:20}".format(str(X_data.shape))
+        if myfilt.shape[0] <= 1:
+            #print("Cannot calculate regression error, too few elements")
+            error = -1
+        else:
+            y_pred = clf.predict(X_data)
+            error = sklearn.metrics.mean_squared_error(y_data, y_pred)
+        print("%s %s msqe: %13.1lf" % (x, y, error))
+
+    for start,end in [(0,3), (3,8), (8, 15), (15, 25), (25,50), (50, 100), (100, 1000000)]:
+        x = "--> Strata  %10d <= %20s < %10d " % (start, "rdb0.glue", end)
+        myfilt = data[(data["rdb0.glue"] >= start) & (data["rdb0.glue"] < end)]
+        X_data = myfilt[features]
+        y_data = myfilt[to_predict]
+        y = " -- elements: {:20}".format(str(X_data.shape))
+        if myfilt.shape[0] <= 1:
+            error = -1
+        else:
+            y_pred = clf.predict(X_data)
+            error = sklearn.metrics.mean_squared_error(y_data, y_pred)
+        print("%s %s msqe: %13.1lf" % (x, y, error))
+
+    return main_error
+
+
 def conf_matrixes(data, features, to_predict, clf, toprint,
                   average="binary", highlight=False):
     # get data
@@ -523,7 +572,7 @@ def conf_matrixes(data, features, to_predict, clf, toprint,
         cnf_matrix, normalize=True,
         title='Normalized confusion matrix -- %s' % toprint)
 
-    return precision, recall, accuracy, roc_auc
+    return roc_auc
 
 
 def check_file_exists(fname):
@@ -535,61 +584,6 @@ def check_file_exists(fname):
     finally:
         f.close()
 
-
-def calc_greedy_best_features(top_feats, get_best_topn_feats, myobj):
-    best_features = [top_feats[0]]
-    for i in range(get_best_topn_feats-1):
-        print("*** Round %d Best feature set until now: %s"
-              % (i, best_features))
-
-        best_sum = 0.0
-        best_feat = None
-        feats_to_try = [i for i in top_feats if i not in best_features]
-        print("Will try to get next best from ", feats_to_try)
-        for feat in feats_to_try:
-            this_feats = list(best_features)
-            this_feats.append(feat)
-            print("Trying feature set: ", this_feats)
-            mysum, y_pred = myobj.one_classifier(this_feats, "x.class", final=True)
-            print("Reported mysum: ", mysum)
-            if mysum > best_sum:
-                best_sum = mysum
-                best_feat = feat
-                print("-> Making this best accuracy")
-
-        print("*** Best feature for round %d was: %s with mysum: %lf"
-              % (i, best_feat, mysum))
-        best_features.append(best_feat)
-
-        print("\n\n")
-        print("Final best feature selection is: ", best_features)
-
-    return best_features
-
-
-def clear_data_from_str_na(df):
-    values2nums = {'luby': 0, 'glue': 1, 'geom': 2}
-
-    df[df.select_dtypes(include='float').columns] = df[df.select_dtypes(include='float').columns].fillna(0)
-
-
-def filter_min_avg_dump_no(df, min_avg_dumpno):
-    print("Filtering to minimum average dump_no of {min_avg_dumpno}...".format(
-        min_avg_dumpno=min_avg_dumpno))
-    print("Pre-filter number of datapoints:", df.shape)
-    df_nofilter = df.copy()
-
-    df['rdb0.dump_no'].replace(['None'], 0, inplace=True)
-    df.fillna(0, inplace=True)
-    # print(df[["fname", "sum_cl_use.num_used"]])
-    files = df[["fname", "rdb0.dump_no"]].groupby("fname").mean()
-    fs = files[files["rdb0.dump_no"] >= min_avg_dumpno].index.values
-    filenames = list(fs)
-    print("Left with {num} files".format(num=len(filenames)))
-    df = df[df["fname"].isin(fs)].copy()
-
-    print("Post-filter number of datapoints:", df.shape)
-    return df_nofilter, df
 
 def output_to_classical_dot(clf, features, fname):
     sklearn.tree.export_graphviz(clf, out_file=fname,
@@ -647,14 +641,31 @@ def cldata_add_computed_features(df, verbose):
 
     # relative overlaps
     print("Relative overlaps...")
+    divide("cl.num_total_lits_antecedents", "cl.antec_sum_size_hist")
 
     # deleting this feature which is NONE
+    del df["cl.antecedents_glue_long_reds_avg"]
+    del df["cl.antecedents_glue_long_reds_max"]
+    del df["cl.antecedents_glue_long_reds_min"]
+    del df["cl.antecedents_glue_long_reds_var"]
+    del df["cl.antecedents_long_red_age_avg"]
+    del df["cl.antecedents_long_red_age_var"]
+    del df["cl.decision_level_hist"]
     del df["sum_cl_use.first_confl_used"]
+    del df["sum_cl_use.last_confl_used"]
 
     # ************
     # TODO decision level and branch depth are the same, right???
     # ************
     print("size/glue/trail rel...")
+    divide("cl.trail_depth_level", "cl.trail_depth_level_hist")
+
+    rst_cur_all_props = add(["rst_cur.propBinRed",
+                            "rst_cur.propBinIrred",
+                            "rst_cur.propLongRed",
+                            "rst_cur.propLongIrred"])
+
+    divide("cl.num_total_lits_antecedents", "cl.num_antecedents")
 
     # sum RDB
     orig_cols = list(df)
@@ -674,12 +685,32 @@ def cldata_add_computed_features(df, verbose):
     divide("rdb1.sum_propagations_made", "cl.time_inside_solver")
 
     divisors = [
-        "rdb0.glue"
+        "cl.size_hist"
+        , "cl.glue_hist"
+        , "rdb0.glue"
         , "cl.orig_glue"
         , "cl.glue_before_minim"
+        , "cl.glue_hist_queue"
+        , "cl.glue_hist_long"
+        # , "cl.decision_level_hist"
+        , "cl.num_resolutions_hist_lt"
+        # , "cl.trail_depth_level_hist"
+        # , "cl.backtrack_level_hist"
+        , "cl.branch_depth_hist_queue"
+        , "cl.antec_overlap_hist"
+        , "(cl.num_total_lits_antecedents/cl.num_antecedents)"
+        , "cl.num_antecedents"
         , rdb0_act_ranking_rel
         , rdb1_act_ranking_rel
+        #, "szfeat_cur.var_cl_ratio"
         , "cl.time_inside_solver"
+        #, "((double)(rdb0.act_ranking_rel+rdb1.act_ranking_rel)/2.0)"
+        #, "sqrt(rdb0.act_ranking_rel)"
+        #, "sqrt(rdb1.act_ranking_rel)"
+        #, "sqrt(rdb0_and_rdb1.act_ranking_rel_avg)"
+        # , "cl.num_overlap_literals"
+        # , "rst_cur.resolutions"
+        #, "rdb0.act_ranking_top_10"
         ]
 
     # Thanks to Chai Kian Ming Adam for the idea of using LOG instead of SQRT
@@ -695,13 +726,14 @@ def cldata_add_computed_features(df, verbose):
     # relative data
     cols = list(df)
     for col in cols:
-        if ("rdb" in col or "cl." in col ) and "restart_type" not in col and "tot_cls_in" not in col and "rst_cur" not in col:
+        if ("rdb" in col or "cl." in col or "rst" in col) and "restart_type" not in col and "tot_cls_in" not in col and "rst_cur" not in col:
             for divisor in divisors:
                 divide(divisor, col)
                 divide(col, divisor)
 
     divisors.extend([
-        "rdb0.last_touched_diff"
+        rst_cur_all_props
+        , "rdb0.last_touched_diff"
         , "rdb0.used_for_uip_creation"
         , "rdb1.used_for_uip_creation"
         , "rdb0.propagations_made"
@@ -752,6 +784,8 @@ def cldata_add_computed_features(df, verbose):
 
     # smaller-or-greater comparisons
     print("smaller-or-greater comparisons...")
+    larger_than("cl.antec_sum_size_hist", "cl.num_total_lits_antecedents")
+    larger_than("cl.antec_overlap_hist", "cl.num_overlap_literals")
 
     # print("flatten/list...")
     #old = set(df.columns.values.flatten().tolist())
