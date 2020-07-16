@@ -245,7 +245,6 @@ void Solver::dump_sql_cl_data()
         );
         added_to_db++;
         cl.stats.dump_no++;
-        cl.stats.rdb1_propagations_made = cl.stats.propagations_made;
         cl.stats.reset_rdb_stats();
     }
     sqlStats->end_transaction();
