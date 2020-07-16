@@ -216,27 +216,12 @@ void Solver::dump_sql_clause_data(
 
 void Solver::dump_sql_cl_data()
 {
+    // TODO : it is assumed that learnts is already sorted
+
     double myTime = cpuTime();
     assert(sqlStats);
     sqlStats->begin_transaction();
     uint64_t added_to_db = 0;
-
-    //     vector<ClOffset> all_learnt;
-    //     for(uint32_t lev = 0; lev < longRedCls.size(); lev++) {
-    //         auto& cc = longRedCls[lev];
-    //         for(const auto& offs: cc) {
-    //             Clause* cl = cl_alloc.ptr(offs);
-    //             assert(!cl->getRemoved());
-    //             assert(cl->red());
-    //             assert(!cl->freed());
-    //             all_learnt.push_back(offs);
-    //         }
-    //     }
-
-    //     std::sort(all_learnt.begin(), all_learnt.end(), SortRedClsAct(cl_alloc));
-
-    // TODO : it is assumed that learnts is already sorted
-
     for (int i = 0; i < learnts.size(); i++) {
 
         Clause& cl = ca[learnts[i]];
@@ -941,6 +926,7 @@ void Solver::reduceDB()
     int i, j;
     double extra_lim = cla_inc / learnts.size(); // Remove any clause below this activity
 
+    sort(learnts, reduceDB_lt(ca));
 #ifdef STATS_MODE
     dump_sql_cl_data();
     printf("c [reduceDB] locked for data generation %lu (%4.2f %%)",
@@ -955,7 +941,6 @@ void Solver::reduceDB()
     }
 #endif
 
-    sort(learnts, reduceDB_lt(ca));
     // Don't delete binary or locked clauses. From the rest, delete clauses from the first half
     // and clauses with activity smaller than 'extra_lim':
     for (i = j = 0; i < learnts.size(); i++) {
