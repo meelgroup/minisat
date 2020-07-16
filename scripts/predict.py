@@ -367,7 +367,7 @@ if __name__ == "__main__":
                         dest="print_features", help="Print features")
     parser.add_argument("--nocomputed", default=False, action="store_true",
                         dest="no_computed", help="Don't add computed features")
-    parser.add_argument("--bestfeatfile", default="../../crystalball/best_features.txt", type=str,
+    parser.add_argument("--bestfeatfile", default="../../scripts/best_features.txt", type=str,
                         dest="best_features_fname", help="Name and position of best features file that lists the best features in order")
 
     # tree/forest options
