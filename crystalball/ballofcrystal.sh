@@ -6,6 +6,7 @@ RATIO="0.2"
 CONF=1
 SHORTPERC=50
 LONGPERC=40
+FNAME="php_h10_p9.cnf"
 
 NEXT_OP="$1"
 

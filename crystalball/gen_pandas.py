@@ -179,12 +179,11 @@ class QueryCls (helper.QueryHelper):
         # final big query
         self.q_select = """
         SELECT
-        tags.val as `fname`
+        (rdb0.conflicts - cl.conflicts) as `cl.time_inside_solver`
         {clause_dat}
         {rdb0_dat}
         {rdb1_dat}
         {sum_cl_use}
-        , (rdb0.conflicts - cl.conflicts) as `cl.time_inside_solver`
         , sum_cl_use.num_used as `x.a_num_used`
         , `sum_cl_use`.`last_confl_used`-`cl`.`conflicts` as `x.a_lifetime`
         , {case_stmt}
@@ -221,11 +220,8 @@ class QueryCls (helper.QueryHelper):
         join cl_last_in_solver on
             cl_last_in_solver.clauseID = rdb0.clauseID
 
-        , tags
-
         WHERE
         cl.clauseID != 0
-        and tags.name = "filename"
         and rdb0.dump_no = rdb1.dump_no+1
         and used_later_long.offset = 0
         and used_later_short.offset = 0
