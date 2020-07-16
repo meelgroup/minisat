@@ -77,7 +77,6 @@ public:
     ) = 0;
 
     virtual bool setup(const Solver* solver) = 0;
-    virtual void add_tag(const std::pair<std::string, std::string>& tag) = 0;
 };
 
 } //end namespace

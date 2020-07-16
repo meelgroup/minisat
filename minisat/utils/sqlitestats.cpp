@@ -238,23 +238,6 @@ bool SQLiteStats::add_solverrun(const Solver* solver)
     return true;
 }
 
-void SQLiteStats::add_tag(const std::pair<string, string>& tag)
-{
-    std::stringstream ss;
-    ss
-    << "INSERT INTO `tags` (`name`, `val`) VALUES("
-    << "'" << tag.first << "'"
-    << ", '" << tag.second << "'"
-    << ");";
-
-    //Inserting element into solverruns to get unique ID
-    if (sqlite3_exec(db, ss.str().c_str(), NULL, NULL, NULL)) {
-        cerr << "SQLite: ERROR Couldn't insert into table 'tags'" << endl;
-        assert(false);
-        std::exit(-1);
-    }
-}
-
 
 void SQLiteStats::writeQuestionMarks(
     size_t num

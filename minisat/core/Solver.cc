@@ -186,9 +186,7 @@ void Solver::set_sqlite(string filename)
 
 void Solver::add_sql_tag(const string& name, const string& val)
 {
-    if (sqlStats) {
-        sqlStats->add_tag(std::make_pair(name, val));
-    }
+    //NOT NEEDED
 }
 
 

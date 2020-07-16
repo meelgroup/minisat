@@ -71,7 +71,6 @@ public:
     ) override;
 
     bool setup(const Solver* solver) override;
-    void add_tag(const std::pair<std::string, std::string>& tag) override;
 
 private:
 
