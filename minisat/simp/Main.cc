@@ -60,6 +60,12 @@ static void SIGINT_exit(int)
 int main(int argc, char** argv)
 {
     try {
+#ifdef PREDICT_MODE
+        printf("This is MiniSat with CrystalBall!\n");
+#endif
+#ifdef STAT_MODE
+        printf("This is MiniSat with which gathers data for CrystalBall!\n");
+#endif
         setUsageHelp(
             "USAGE: %s [options] <input-file> <result-output-file>\n\n  where input may be either "
             "in plain or gzipped DIMACS.\n");
