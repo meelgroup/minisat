@@ -996,7 +996,7 @@ void Solver::removeSatisfied(vec<CRef>& cs)
                 if(c.size() == 0)
                     empty_on_trimming = true;
             }
-            if (trimmed && !empty_on_trimming){
+            if (drup_file && trimmed && !empty_on_trimming){
                 if(drup_debug){
                     printf("clause before trim : ");
                     for (int k = 2; k < add_oc.size(); k++){printf("%d ",toInt(add_oc[k]));}
