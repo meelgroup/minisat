@@ -90,8 +90,9 @@ set(MINISAT_SOVERSION ${MINISAT_SOMAJOR})
 #------------------------------------------------------------------------------
 find_package(ZLIB)
 include_directories(${ZLIB_INCLUDE_DIR})
-include_directories(${minisat_SOURCE_DIR})
+# link_directories(${ZLIB_LIB_DIR})
 
+include_directories(${minisat_SOURCE_DIR})
 #------------------------------------------------------------------------------
 # Compile flags:
 #------------------------------------------------------------------------------
@@ -226,18 +227,26 @@ set(MINISAT_LIB_SOURCES
     minisat/utils/Options.cc
     minisat/utils/System.cc
     minisat/core/Solver.cc
-    minisat/core/cl_predictors.cc
-    minisat/utils/sqlitestats.cpp
-    ${CMAKE_CURRENT_BINARY_DIR}/sql_tablestructure.cpp
     minisat/simp/SimpSolver.cc)
 
+if(STATS_MODE)
+    set(MINISAT_LIB_SOURCES
+    ${MINISAT_LIB_SOURCES}
+    minisat/utils/sqlitestats.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/sql_tablestructure.cpp)
+endif()
 
+if(PREDICT_MODE)
+    set(MINISAT_LIB_SOURCES
+    ${MINISAT_LIB_SOURCES}
+    minisat/core/cl_predictors.cc)
+endif()
 
 add_library(minisat-lib-static STATIC ${MINISAT_LIB_SOURCES})
 add_library(minisat-lib-shared SHARED ${MINISAT_LIB_SOURCES})
 
 target_link_libraries(minisat-lib-shared ${ZLIB_LIBRARY} ${lib_link_libs})
-target_link_libraries(minisat-lib-static ${ZLIB_LIBRARY} ${lib_link_libs})
+target_link_libraries(minisat-lib-static ${ZLIB_LIBRARY} )
 
 #add_executable(minisat_core minisat/core/Main.cc)
 add_executable(minisat_simp minisat/simp/Main.cc)
@@ -248,7 +257,7 @@ endif()
 
 if(STATIC_BINARIES)
   #target_link_libraries(minisat_core minisat-lib-static)
-  target_link_libraries(minisat_simp minisat-lib-static)
+  target_link_libraries(minisat_simp minisat-lib-static -static)
 else()
   #target_link_libraries(minisat_core minisat-lib-shared)
   target_link_libraries(minisat_simp minisat-lib-shared)
