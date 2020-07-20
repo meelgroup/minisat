@@ -189,7 +189,7 @@ class Solver
     int restart_first; // The initial restart limit.                                                                (default 100)
     double
         restart_inc; // The factor with which the restart limit is multiplied in each restart.                    (default 1.5)
-    int reduceDB_at_confl; // Fix reduceDB calling frequency at each this many conflicts
+    uint64_t reduceDB_at_confl; // Fix reduceDB calling frequency at each this many conflicts
     double
         learntsize_factor; // The intitial limit for learnt clauses is a factor of the original clauses.                (default 1 / 3)
     double
@@ -213,7 +213,6 @@ class Solver
     string sqlite_filename = "";
     double cldatadumpratio;
 
-    uint64_t reduceDB_call;  // current reduceDB call number
     uint64_t reducedb_last_confl;  // reduceDB called last time at this restart
 
    protected:
@@ -373,7 +372,6 @@ class Solver
     void reduceDB_ml();                  // ReduceDB based on learnt heuristics
     void removeSatisfied(vec<CRef>& cs); // Shrink 'cs' to contain only non-satisfied clauses.
     void rebuildOrderHeap();
-    bool reducedb_needed();
 
     // Maintaining Variable/Clause activity:
     //
@@ -713,16 +711,11 @@ inline bool Solver::withinBudget() const
 inline bool Solver::reduceDB_needed()
 {
     if (reduceDB_at_confl == 0){
-        if(learnts.size() - nAssigns() >= max_learnts)
-            return true;
-        else
+        if (conflicts < reduceDB_at_confl)
             return false;
+        return (learnts.size() - nAssigns() >= max_learnts);
     }
-    if(conflicts - reducedb_last_confl >= reduceDB_at_confl)
-        return true;
-    else
-        return false;
-
+    return (conflicts - last_conflicts >= reduceDB_at_confl);
 }
 
 // FIXME: after the introduction of asynchronous interrruptions the solve-versions that return a
@@ -816,18 +809,6 @@ inline void Solver::toDimacs(const char* file, Lit p, Lit q, Lit r)
     as.push(q);
     as.push(r);
     toDimacs(file, as);
-}
-inline bool Solver::reducedb_needed()
-{
-    if(rdb_freq == -1){
-    #ifdef PREDICT_MODE
-        if (conflicts < rdb_freq) return false;
-    #endif
-        return (learnts.size() - nAssigns() >= max_learnts + rdb_freq);
-    } else {
-        return (conflicts >= last_conflicts + rdb_freq);
-    }
-
 }
 //=================================================================================================
 // Debug etc:

@@ -777,7 +777,7 @@ void SimpSolver::garbageCollect()
         ca.extra_clause_field; // NOTE: this is important to keep (or lose) the extra fields.
     relocAll(to);
     Solver::relocAll(to);
-    if (verbosity >= 2)
+    if (verbosity >= 3)
         printf("|  Garbage collection:   %12d bytes => %12d bytes             |\n",
                ca.size() * ClauseAllocator::Unit_Size, to.size() * ClauseAllocator::Unit_Size);
     to.moveTo(ca);

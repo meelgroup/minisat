@@ -90,7 +90,6 @@ Solver::Solver()
       drup_file(NULL),
       use_clid(false),
       verbosity(0),
-      show_info(0),
       var_decay(opt_var_decay),
       clause_decay(opt_clause_decay),
       random_var_freq(opt_random_var_freq),
@@ -137,9 +136,7 @@ Solver::Solver()
       tot_literals(0),
       num_removed_clauses(0),
       conflicts_this_restart(0),
-      old_decision_level(0)
-
-      reduceDB_call(0),
+      old_decision_level(0),
       reducedb_last_confl(0)
       ,
       watches(WatcherDeleted(ca)),
@@ -880,7 +877,6 @@ struct reduceDB_pred {
 void Solver::reduceDB_ml()
 {
     int i, j;
-    //printf("c ReduceDB_ml called\n");
     // TODO : i want to replace pred_keep_above with extra_lim sometime
     // double extra_lim = cla_inc / learnts.size();
     // -- Remove any clause below this activity
@@ -903,13 +899,12 @@ void Solver::reduceDB_ml()
     }
 
     sort(learnts, reduceDB_pred(ca));
-    uint32_t x = 0;
     uint32_t toremove = learnts.size() / 2;
     for (i = j = 0; i < learnts.size(); i++) {
         Clause& c = ca[learnts[i]];
         uint64_t time_inside_solver = conflicts - c.stats.introduced_at_conflict;
 
-        if (time_inside_solver > 10000 &&
+        if (time_inside_solver > reduceDB_at_confl &&
             c.size() > 2 &&
             !locked(c) &&
             toremove > 0)
@@ -925,7 +920,9 @@ void Solver::reduceDB_ml()
         c.stats.reset_rdb_stats();
     }
     learnts.shrink(i - j);
-    printf("c [ReduceDB_ml] reduced : %d  clauses\n", i-j);
+    if(verbosity >=2)
+        printf("c [ReduceDB_ml] reduced : %d  clauses out of %d (%2.1f %%)\n",
+           i-j, i, (double)(i-j)*100.0/i);
     checkGarbage();
 }
 #endif
@@ -954,8 +951,10 @@ void Solver::reduceDB()
     // and clauses with activity smaller than 'extra_lim':
     for (i = j = 0; i < learnts.size(); i++) {
         Clause& c = ca[learnts[i]];
-        if (c.size() > 2 && !locked(c) &&
-            (i < learnts.size() / 2 || c.activity() < extra_lim))
+        if (c.size() > 2 &&
+            !locked(c) &&
+            (i < learnts.size() / 2 ||
+            c.activity() < extra_lim))
         {
             if (drup_debug) { fprintf(drup_file, "[reduceDB] "); }
             if(verbosity > 1 && c.stats.ID > 0) printf("c ReduceDB removing : %d \n", c.stats.ID);
@@ -966,12 +965,6 @@ void Solver::reduceDB()
             // if(verbosity > 1) printf("c ReduceDB not removing : %d \n", c.stats.ID);
 
         }
-    }
-    if (show_info == 1){
-        reduceDB_call++;
-        // printf("c [reduceDB] #reduceDB_call | conflict | conflict_diff | restart | learnts_size | extra_lim | max_learnts ");
-        printf("c [reduceDB] %lu | %lu | %lu |  %lu | %d | %.2e | %.0f | %d \n", reduceDB_call, conflicts, (conflicts - reducedb_last_confl), starts, learnts.size(), extra_lim, max_learnts, i-j);
-        reducedb_last_confl = conflicts;
     }
     learnts.shrink(i - j);
     printf(" reduced : %d  clauses\n", i-j);
@@ -1216,7 +1209,7 @@ lbool Solver::search(int nof_conflicts)
                 learntsize_adjust_cnt = (int)learntsize_adjust_confl;
                 max_learnts *= learntsize_inc;
 
-                if (verbosity >= 1 && show_info != 1)
+                if (verbosity >= 1)
                     printf("| %9d | %7d %8d %8d | %8d %8d %6.0f | %6.3f %% |\n", (int)conflicts,
                            (int)dec_vars - (trail_lim.size() == 0 ? trail.size() : trail_lim[0]),
                            nClauses(), (int)clauses_literals, (int)max_learnts, nLearnts(),
@@ -1240,7 +1233,7 @@ lbool Solver::search(int nof_conflicts)
             if (decisionLevel() == 0 && !simplify())
                 return l_False;
 
-            if (reducedb_needed()) {
+            if (reduceDB_needed()) {
                 // Reduce the set of learnt clauses:
 #ifdef PREDICT_MODE
                 reduceDB_ml();
@@ -1348,12 +1341,6 @@ lbool Solver::solve_()
         printf("| Conflicts |          ORIGINAL         |          LEARNT          | Progress |\n");
         printf("|           |    Vars  Clauses Literals |    Limit  Clauses Lit/Cl |          |\n");
         printf("===============================================================================\n");
-        if (show_info == 1){
-            printf("c  #  RDB_call | conflict  |  restart |    extra_lim   | reduced  \n");
-            printf("c              | confl_bet | lernt_sz |   max_learnts  | clauses \n");
-
-        }
-
     }
 
     // Search:
@@ -1362,9 +1349,6 @@ lbool Solver::solve_()
         double rest_base =
             luby_restart ? luby(restart_inc, curr_restarts) : pow(restart_inc, curr_restarts);
         status = search(rest_base * restart_first);
-        if(verbosity > 1)
-            printf("c learnt size now : %d  [luby %d ]\n", learnts.size(),curr_restarts);
-
         if (!withinBudget())
             break;
         curr_restarts++;
@@ -1576,7 +1560,7 @@ void Solver::garbageCollect()
     ClauseAllocator to(ca.size() - ca.wasted());
 
     relocAll(to);
-    if (verbosity >= 2)
+    if (verbosity >= 3)
         printf("|  Garbage collection:   %12d bytes => %12d bytes             |\n",
                ca.size() * ClauseAllocator::Unit_Size, to.size() * ClauseAllocator::Unit_Size);
     to.moveTo(ca);

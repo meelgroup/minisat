@@ -74,7 +74,7 @@ int main(int argc, char** argv)
         // Extra options:
         //
         IntOption verb("MAIN", "verb", "Verbosity level (0=silent, 1=some, 2=more).", 1,
-                       IntRange(0, 2));
+                       IntRange(0, 10));
         IntOption show_info("MAIN", "show-info", "Show specific info (0=silent, 1=reduceDB).", 0,
                        IntRange(0, 1));
         BoolOption pre("MAIN", "pre", "Completely turn on/off any preprocessing.", true);
@@ -106,7 +106,6 @@ int main(int argc, char** argv)
 
         S.parsing = true;
         S.verbosity = verb;
-        S.show_info = show_info;
         S.drup_file = NULL;
 
 #ifdef BIN_DRUP
