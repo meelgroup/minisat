@@ -61,14 +61,23 @@ int main(int argc, char** argv)
 {
     try {
 #ifdef PREDICT_MODE
-        printf("This is MiniSat with CrystalBall!\n");
+        printf("c This is MiniSat with CrystalBall!\n");
 #else
     #ifdef STATS_MODE
-        printf("This is MiniSat that gathers data for CrystalBall!\n");
+        printf("c This is MiniSat that gathers data for CrystalBall!\n");
     #else
-        printf("This is MiniSat 2.2.0\n");
+        printf("c This is MiniSat 2.2.0\n");
     #endif
 #endif
+        string commandLine;
+        for(int i = 0; i < argc; i++) {
+            commandLine += string(argv[i]);
+            if (i+1 < argc) {
+                commandLine += " ";
+            }
+        }
+        printf("c Executed with command line: %s\n", commandLine.c_str());
+
         setUsageHelp(
             "USAGE: %s [options] <input-file> <result-output-file>\n\n  where input may be either "
             "in plain or gzipped DIMACS.\n");
@@ -169,6 +178,7 @@ int main(int argc, char** argv)
         printf("c problem CNF file : %s\n", cnffilename.c_str());
 
         if (S.verbosity > 0) {
+            printf("c SHA revision : %s \n",VERSION);
             printf(
                 "============================[ Problem Statistics "
                 "]=============================\n");

@@ -162,8 +162,10 @@ if (GIT_EXECUTABLE)
   include(GetGitRevisionDescription)
   get_git_head_revision(GIT_REFSPEC GIT_SHA1)
   MESSAGE(STATUS "GIT hash found: ${GIT_SHA1}")
+  add_definitions( -DVERSION="${GIT_SHA1}" )
 else()
   set(GIT_SHA "GIT-hash-notfound")
+  add_definitions( -DVERSION="githashnotfound" )
 endif()
 
 # -----------------------------------------------------------------------------

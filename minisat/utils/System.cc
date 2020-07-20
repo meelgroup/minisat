@@ -123,7 +123,7 @@ void Minisat::setX86FPUPrecision()
     _FPU_GETCW(oldcw);
     newcw = (oldcw & ~_FPU_EXTENDED) | _FPU_DOUBLE;
     _FPU_SETCW(newcw);
-    printf("WARNING: for repeatability, setting FPU to use double precision\n");
+//     printf("WARNING: for repeatability, setting FPU to use double precision\n");
 #endif
 }
 
