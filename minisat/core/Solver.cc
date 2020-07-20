@@ -908,21 +908,18 @@ void Solver::reduceDB_ml()
             !locked(c) &&
             toremove > 0)
         {
-            if(verbosity > 1 && c.stats.ID > 0) printf("c ReduceDB removing : %d \n", c.stats.ID);
             removeClause(learnts[i]);
             num_removed_clauses++;
             toremove--;
         } else{
             learnts[j++] = learnts[i];
-            // if(verbosity > 1) printf("c ReduceDB not removing : %d \n", c.stats.ID);
-
         }
 
         c.stats.dump_no++;
         c.stats.reset_rdb_stats();
     }
     learnts.shrink(i - j);
-    //printf(" reduced : %d  clauses\n", i-j);
+    printf("c [ReduceDB_ml] reduced : %d  clauses\n", i-j);
     checkGarbage();
 }
 #endif
@@ -1231,7 +1228,7 @@ lbool Solver::search(int nof_conflicts)
             if (decisionLevel() == 0 && !simplify())
                 return l_False;
 
-            if (conflicts >= last_conflicts+10000) {
+            if (reducedb_needed()) {
                 // Reduce the set of learnt clauses:
 #ifdef PREDICT_MODE
                 reduceDB_ml();

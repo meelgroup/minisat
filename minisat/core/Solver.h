@@ -369,6 +369,7 @@ class Solver
     void reduceDB_ml();                  // ReduceDB based on learnt heuristics
     void removeSatisfied(vec<CRef>& cs); // Shrink 'cs' to contain only non-satisfied clauses.
     void rebuildOrderHeap();
+    bool reducedb_needed();
 
     // Maintaining Variable/Clause activity:
     //
@@ -796,7 +797,18 @@ inline void Solver::toDimacs(const char* file, Lit p, Lit q, Lit r)
     as.push(r);
     toDimacs(file, as);
 }
+inline bool Solver::reducedb_needed()
+{
+    if(rdb_freq == -1){
+    #ifdef PREDICT_MODE
+        if (conflicts < rdb_freq) return false;
+    #endif
+        return (learnts.size() - nAssigns() >= max_learnts + rdb_freq);
+    } else {
+        return (conflicts >= last_conflicts + rdb_freq);
+    }
 
+}
 //=================================================================================================
 // Debug etc:
 

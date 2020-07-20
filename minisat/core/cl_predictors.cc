@@ -66,8 +66,8 @@ void ClPredictors::load_models(std::string short_fname, std::string long_fname)
     ret = XGBoosterLoadModel(handles[short_pred], short_fname.c_str());
     assert(ret == 0);
 
-    ret = XGBoosterLoadModel(handles[long_pred], long_fname.c_str());
-    assert(ret == 0);
+    //     ret = XGBoosterLoadModel(handles[long_pred], long_fname.c_str());
+    //     assert(ret == 0);
 }
 
 void ClPredictors::set_up_input(const Clause* cl,
