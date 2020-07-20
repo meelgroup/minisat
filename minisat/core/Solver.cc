@@ -967,7 +967,13 @@ void Solver::reduceDB()
         }
     }
     learnts.shrink(i - j);
+#ifdef STATS_MODE
     printf(" reduced : %d  clauses\n", i-j);
+#else
+    if(verbosity >=2)
+        printf("c [ReduceDB] reduced : %d  clauses out of %d (%2.1f %%)\n",
+           i-j, i, (double)(i-j)*100.0/i);
+#endif
     checkGarbage();
 }
 
