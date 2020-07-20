@@ -76,7 +76,9 @@ static DoubleOption opt_garbage_frac(
     DoubleRange(0, false, HUGE_VAL, false));
 static IntOption opt_min_learnts_lim(_cat, "min-learnts", "Minimum learnt clause limit", 0,
                                      IntRange(0, INT32_MAX));
-
+static IntOption opt_reducedb_confl(_cat, "rdb-at",
+                "k : Call reduceDB at each k conflict. 0=use minisat strategy", 0,
+                                     IntRange(0, INT32_MAX));
 //=================================================================================================
 // Constructor/Destructor:
 
@@ -88,6 +90,7 @@ Solver::Solver()
       drup_file(NULL),
       use_clid(false),
       verbosity(0),
+      show_info(0),
       var_decay(opt_var_decay),
       clause_decay(opt_clause_decay),
       random_var_freq(opt_random_var_freq),
@@ -100,7 +103,8 @@ Solver::Solver()
       garbage_frac(opt_garbage_frac),
       min_learnts_lim(opt_min_learnts_lim),
       restart_first(opt_restart_first),
-      restart_inc(opt_restart_inc)
+      restart_inc(opt_restart_inc),
+      reduceDB_at_confl(opt_reducedb_confl)
 
       // Parameters (the rest):
       //
@@ -135,6 +139,8 @@ Solver::Solver()
       conflicts_this_restart(0),
       old_decision_level(0)
 
+      reduceDB_call(0),
+      reducedb_last_confl(0)
       ,
       watches(WatcherDeleted(ca)),
       order_heap(VarOrderLt(activity)),
@@ -961,6 +967,12 @@ void Solver::reduceDB()
 
         }
     }
+    if (show_info == 1){
+        reduceDB_call++;
+        // printf("c [reduceDB] #reduceDB_call | conflict | conflict_diff | restart | learnts_size | extra_lim | max_learnts ");
+        printf("c [reduceDB] %lu | %lu | %lu |  %lu | %d | %.2e | %.0f | %d \n", reduceDB_call, conflicts, (conflicts - reducedb_last_confl), starts, learnts.size(), extra_lim, max_learnts, i-j);
+        reducedb_last_confl = conflicts;
+    }
     learnts.shrink(i - j);
     printf(" reduced : %d  clauses\n", i-j);
     checkGarbage();
@@ -977,7 +989,7 @@ void Solver::removeSatisfied(vec<CRef>& cs)
             removeClause(cs[i]);
         }
         else {
-            // Trim clause:
+                        // Trim clause:
             bool trimmed = false, empty_on_trimming = false;
             if (drup_file) {
                 add_oc.clear();
@@ -1204,7 +1216,7 @@ lbool Solver::search(int nof_conflicts)
                 learntsize_adjust_cnt = (int)learntsize_adjust_confl;
                 max_learnts *= learntsize_inc;
 
-                if (verbosity >= 1)
+                if (verbosity >= 1 && show_info != 1)
                     printf("| %9d | %7d %8d %8d | %8d %8d %6.0f | %6.3f %% |\n", (int)conflicts,
                            (int)dec_vars - (trail_lim.size() == 0 ? trail.size() : trail_lim[0]),
                            nClauses(), (int)clauses_literals, (int)max_learnts, nLearnts(),
@@ -1336,6 +1348,12 @@ lbool Solver::solve_()
         printf("| Conflicts |          ORIGINAL         |          LEARNT          | Progress |\n");
         printf("|           |    Vars  Clauses Literals |    Limit  Clauses Lit/Cl |          |\n");
         printf("===============================================================================\n");
+        if (show_info == 1){
+            printf("c  #  RDB_call | conflict  |  restart |    extra_lim   | reduced  \n");
+            printf("c              | confl_bet | lernt_sz |   max_learnts  | clauses \n");
+
+        }
+
     }
 
     // Search:
