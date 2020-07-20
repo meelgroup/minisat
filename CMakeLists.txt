@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.3 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.2 FATAL_ERROR)
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_CXX_STANDARD 11)
 
@@ -69,6 +69,10 @@ add_cxx_flag_if_supported("-Wunreachable-code")
 
 add_compile_options("-O3")
 
+if(STATIC_BINARIES)
+    set(CMAKE_EXE_LINKER_FLAGS " ${CMAKE_EXE_LINKER_FLAGS} -static -Wl,--whole-archive -ldl -lpthread -Wl,--no-whole-archive -static")
+endif()
+
 #------------------------------------------------------------------------------
 # Library version:
 #------------------------------------------------------------------------------
@@ -101,10 +105,6 @@ add_definitions(-D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS)
 # -----------------------------------------------------------------------------
 # Look for python
 # -----------------------------------------------------------------------------
-if (STATICCOMPILE)
-    set(ENABLE_PYTHON_INTERFACE OFF)
-endif()
-
 option(FORCE_PYTHON2 OFF)
 option(FORCE_PYTHON3 OFF)
 
@@ -246,7 +246,7 @@ add_library(minisat-lib-static STATIC ${MINISAT_LIB_SOURCES})
 add_library(minisat-lib-shared SHARED ${MINISAT_LIB_SOURCES})
 
 target_link_libraries(minisat-lib-shared ${ZLIB_LIBRARY} ${lib_link_libs})
-target_link_libraries(minisat-lib-static ${ZLIB_LIBRARY} )
+target_link_libraries(minisat-lib-static ${ZLIB_LIBRARY} ${lib_link_libs})
 
 #add_executable(minisat_core minisat/core/Main.cc)
 add_executable(minisat_simp minisat/simp/Main.cc)
@@ -257,7 +257,7 @@ endif()
 
 if(STATIC_BINARIES)
   #target_link_libraries(minisat_core minisat-lib-static)
-  target_link_libraries(minisat_simp minisat-lib-static -static)
+  target_link_libraries(minisat_simp minisat-lib-static)
 else()
   #target_link_libraries(minisat_core minisat-lib-shared)
   target_link_libraries(minisat_simp minisat-lib-shared)
