@@ -68,7 +68,7 @@ make -j8 )
 # =============================================================================
 
 cd "$FNAME-dir"
-../minisat -cldatadumpratio="$RATIO" -sqlitedb="$FNAMEOUT.db-raw" -drup-file="$FNAMEOUT.drat" "../$FNAME" #| tee minisat-stat-run.out
+../minisat -cldatadumpratio="$RATIO" -rdb-at=10000 -sqlitedb="$FNAMEOUT.db-raw" -drup-file="$FNAMEOUT.drat" "../$FNAME" #| tee minisat-stat-run.out
 
 # =============================================================================
 #  Run our own DRAT-Trim
