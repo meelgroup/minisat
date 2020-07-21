@@ -132,17 +132,6 @@ int main(int argc, char** argv)
         printf("c Will add verbose information in text DRUP proof \n");
 #endif
 
-#ifdef STATS_MODE
-        if(sqlite_filename == NULL){
-            printf("In Stat Mode, you must provide SQLite filename\n");
-        }
-        assert(sqlite_filename);
-        string s(sqlite_filename);
-        S.sqlite_filename = s;
-        S.set_sqlite(S.sqlite_filename);
-        S.cldatadumpratio = opt_dump_ratio;
-#endif
-
         if (drup || strlen(drup_file)) {
             S.drup_file = strlen(drup_file) ? fopen(drup_file, "wb") : stdout;
             if (S.drup_file == NULL) {
@@ -155,6 +144,22 @@ int main(int argc, char** argv)
             }
             printf("c DRUP proof generation: %s\n", S.drup_file == stdout ? "stdout" : drup_file);
         }
+
+#ifdef STATS_MODE
+        if(sqlite_filename == NULL){
+            printf("In Stat Mode, you must provide SQLite filename\n");
+        }
+        assert(sqlite_filename);
+        string s(sqlite_filename);
+        S.sqlite_filename = s;
+        S.set_sqlite(S.sqlite_filename);
+        S.cldatadumpratio = opt_dump_ratio;
+        if(S.cldatadumpratio<0.0000001)
+            printf("c *STAT_MODE* Setting cldatadumpratio might have been a better idea.\n");
+        if(S.drup_file==NULL)
+            printf("c *STAT_MODE* Setting a drup file might have been a better idea.\n");
+
+#endif
 
         solver = &S;
         // Use signal handlers that forcibly quit until the solver will be able to respond to
@@ -173,9 +178,6 @@ int main(int argc, char** argv)
         gzFile in = (argc == 1) ? gzdopen(0, "rb") : gzopen(argv[1], "rb");
         if (in == NULL)
             printf("ERROR! Could not open file: %s\n", argc == 1 ? "<stdin>" : argv[1]), exit(1);
-
-        string cnffilename(argv[1]);
-        printf("c problem CNF file : %s\n", cnffilename.c_str());
 
         if (S.verbosity > 0) {
             printf("c SHA revision : %s \n",VERSION);

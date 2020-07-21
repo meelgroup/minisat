@@ -935,7 +935,8 @@ void Solver::reduceDB()
     sort(learnts, reduceDB_lt(ca));
 #ifdef STATS_MODE
     dump_sql_cl_data();
-    printf("c [reduceDB] locked for data generation %lu (%4.2f %%)",
+    if(verbosity > 1)
+        printf("c [reduceDB] locked for data generation %lu (%4.2f %%)",
            num_locked_for_data_gen, 100.0 * (float)num_locked_for_data_gen / nLearnts());
      if (verbosity > 1 ){
         printf("c Clauses in Database now : \n");
@@ -968,7 +969,8 @@ void Solver::reduceDB()
     }
     learnts.shrink(i - j);
 #ifdef STATS_MODE
-    printf(" reduced : %d  clauses\n", i-j);
+    if(verbosity > 1)
+        printf(" reduced : %d  clauses\n", i-j);
 #else
     if(verbosity >=2)
         printf("c [ReduceDB] reduced : %d  clauses out of %d (%2.1f %%)\n",

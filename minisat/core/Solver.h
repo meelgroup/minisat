@@ -28,10 +28,10 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "minisat/mtl/Vec.h"
 #include "minisat/utils/Options.h"
 
-// #ifdef STATS_MODE
+#ifdef STATS_MODE
 #include "minisat/utils/sqlitestats.h"
 #include "minisat/utils/sqlstats.h"
-// #endif
+#endif
 
 #include <iostream>
 #include <string>
@@ -209,9 +209,12 @@ class Solver
     uint64_t num_removed_clauses;
     uint64_t conflicts_this_restart;
     int old_decision_level;
+
+    #ifdef STATS_MODE
     SQLStats* sqlStats = NULL;
     string sqlite_filename = "";
     double cldatadumpratio;
+#endif
 
     uint64_t reducedb_last_confl;  // reduceDB called last time at this restart
 
