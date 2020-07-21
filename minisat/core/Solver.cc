@@ -79,6 +79,9 @@ static IntOption opt_min_learnts_lim(_cat, "min-learnts", "Minimum learnt clause
 static IntOption opt_reducedb_confl(_cat, "rdb-at",
                 "k : Call reduceDB at each k conflict. 0=use minisat strategy", 0,
                                      IntRange(0, INT32_MAX));
+static StringOption json_filename(_cat, "pred", "Location of json file of predicted model.",
+                                  "../minisat/predict/predictor_short.json");
+
 //=================================================================================================
 // Constructor/Destructor:
 
@@ -159,11 +162,14 @@ Solver::Solver()
       propagation_budget(-1),
       asynch_interrupt(false)
 
+#ifdef PREDICT_MODE
       //Predict system
       ,
-      pred_conf_short("../minisat/predict/predictor_short.json"),
+      pred_conf_short(json_filename),
       pred_conf_long("../minisat/predict/predictor_long.json"),
       pred_keep_above(0.5f)
+#endif
+
 {
     MYFLAG = 0;
     #ifdef PREDICT_MODE

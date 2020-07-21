@@ -210,13 +210,20 @@ class Solver
     uint64_t conflicts_this_restart;
     int old_decision_level;
 
-    #ifdef STATS_MODE
+#ifdef STATS_MODE
     SQLStats* sqlStats = NULL;
     string sqlite_filename = "";
     double cldatadumpratio;
 #endif
 
     uint64_t reducedb_last_confl;  // reduceDB called last time at this restart
+
+#ifdef PREDICT_MODE
+        //Predictor system
+    std::string pred_conf_short;
+    std::string pred_conf_long;
+    float pred_keep_above;
+#endif
 
    protected:
     // Helper structures:
@@ -344,11 +351,6 @@ class Solver
     int64_t conflict_budget;    // -1 means no budget.
     int64_t propagation_budget; // -1 means no budget.
     bool asynch_interrupt;
-
-    //Predictor system
-    std::string pred_conf_short;
-    std::string pred_conf_long;
-    float pred_keep_above;
 
     // Main internal methods:
     //

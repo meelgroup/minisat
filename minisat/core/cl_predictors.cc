@@ -63,6 +63,7 @@ void ClPredictors::load_models(std::string short_fname, std::string long_fname)
     //     const char* filen;// = short_fname.c_str();
     //     std::ifstream infile(short_fname.c_str());
     //     printf("c boost file read %d", infile.good());
+    printf("c Using JSON Predict file : %s\n",short_fname.c_str());
     ret = XGBoosterLoadModel(handles[short_pred], short_fname.c_str());
     assert(ret == 0);
 
