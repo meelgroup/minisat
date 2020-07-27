@@ -66,7 +66,7 @@ static IntOption opt_phase_saving(_cat, "phase-saving",
                                   2, IntRange(0, 2));
 static BoolOption opt_rnd_init_act(_cat, "rnd-init", "Randomize the initial activity", false);
 static BoolOption opt_luby_restart(_cat, "luby", "Use the Luby restart sequence", true);
-static BoolOption opt_glucose_restart(_cat, "glu-rst", "Use  glucose restarts", true);
+static BoolOption opt_glucose_restart(_cat, "glu-rst", "Use  glucose restarts", false);
 static IntOption opt_restart_first(_cat, "rfirst", "The base restart interval", 100,
                                    IntRange(1, INT32_MAX));
 static DoubleOption opt_restart_inc(_cat, "rinc", "Restart interval increase factor", 2,
@@ -1201,11 +1201,12 @@ lbool Solver::search(int nof_conflicts)
                 ca[cr].stats.locked_for_data_gen = false;
 
 #ifdef PREDICT_MODE
-            if(pred_rdb){
+            if(pred_rst){
                 Clause& c = ca[cr];
-                const uint32_t act_ranking_top_10 = 5;
+                myrnd = drand(random_seed);
+                const uint32_t act_ranking_top_10 = 10*myrnd;
 //                 std::ceil((double) (i + 1) / ((double)learnts.size() / 10.0));
-                double act_ranking_rel = 5;
+                double act_ranking_rel = myrnd;
 //                 double act_ranking_rel = (double) (i + 1) / (double)learnts.size();
 
                 int64_t last_touched_diff = (int64_t)conflicts - (int64_t)c.stats.last_touched;
@@ -1216,7 +1217,9 @@ lbool Solver::search(int nof_conflicts)
                     act_ranking_rel,
                     act_ranking_top_10
                 );
+//                 printf("c pushing %f\n", c.stats.pred);
                 pred_queue.push(c.stats.pred);
+                global_pred_sum += (c.stats.pred);
 
             }
 #endif
