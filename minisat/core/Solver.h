@@ -223,6 +223,8 @@ class Solver
     std::string pred_conf_short;
     std::string pred_conf_long;
     float pred_keep_above;
+    bool pred_rdb;
+    bool pred_rst;
 #endif
 
    protected:

@@ -79,9 +79,12 @@ static IntOption opt_min_learnts_lim(_cat, "min-learnts", "Minimum learnt clause
 static IntOption opt_reducedb_confl(_cat, "rdb-at",
                 "k : Call reduceDB at each k conflict. 0=use minisat strategy", 0,
                                      IntRange(0, INT32_MAX));
+#ifdef PREDICT_MODE
+static BoolOption opt_pred_rdb(_cat, "pred-rdb", "Use ML based prediction system in Clause Maintainance", false);
+static BoolOption opt_pred_rst(_cat, "pred-rst", "Use ML based restarts", false);
 static StringOption json_filename(_cat, "pred", "Location of json file of predicted model.",
                                   "../minisat/predict/predictor_short.json");
-
+#endif
 //=================================================================================================
 // Constructor/Destructor:
 
@@ -167,7 +170,9 @@ Solver::Solver()
       ,
       pred_conf_short(json_filename),
       pred_conf_long("../minisat/predict/predictor_long.json"),
-      pred_keep_above(0.5f)
+      pred_keep_above(0.5f),
+      pred_rdb(opt_pred_rdb),
+      pred_rst(opt_pred_rst)
 #endif
 
 {
@@ -1250,9 +1255,13 @@ lbool Solver::search(int nof_conflicts)
             if (reduceDB_needed()) {
                 // Reduce the set of learnt clauses:
 #ifdef PREDICT_MODE
+            if(pred_rdb){
                 reduceDB_ml();
-#else
+            } else {
+#endif
                 reduceDB();
+#ifdef PREDICT_MODE
+            }
 #endif
                 last_conflicts = conflicts;
             }
