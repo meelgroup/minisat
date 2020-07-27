@@ -47,7 +47,32 @@ class ClPredictors;
 
 class Solver
 {
-   public:
+private:
+    template<typename T>
+    class MyQueue {
+        int max_sz, q_sz;
+        int ptr;
+        int64_t sum;
+        vec<T> q;
+    public:
+        MyQueue(int sz) : max_sz(sz), q_sz(0), ptr(0), sum(0) { assert(sz > 0); q.growTo(sz); }
+        inline bool   full () const { return q_sz == max_sz; }
+// #ifdef INT_QUEUE_AVG
+        inline T      avg  () const { assert(full()); return sum / max_sz; }
+// #else
+//         inline double avg  () const { assert(full()); return sum / (double) max_sz; }
+// #endif
+        inline void   clear()       { sum = 0; q_sz = 0; ptr = 0; }
+        void push(T e) {
+            if (q_sz < max_sz) q_sz++;
+            else sum -= q[ptr];
+            sum += e;
+            q[ptr++] = e;
+            if (ptr == max_sz) ptr = 0;
+        }
+    };
+
+public:
     // Constructor/Destructor:
     //
     Solver();
@@ -178,6 +203,7 @@ class Solver
     double random_var_freq;
     double random_seed;
     bool luby_restart;
+    bool glucose_restart;
     int ccmin_mode;    // Controls conflict clause minimization (0=none, 1=basic, 2=deep).
     int phase_saving;  // Controls the level of phase saving (0=none, 1=limited, 2=full).
     bool rnd_pol;      // Use random polarities for branching heuristics.
@@ -199,6 +225,7 @@ class Solver
     double learntsize_adjust_inc;
 
     int learnt_cl_size;
+    bool restart, cached;
 
     // Statistics: (read-only member variable)
     //
@@ -321,6 +348,11 @@ class Solver
     vec<unsigned int>
         permDiff; // permDiff[var] contains the current conflict number... Used to count the number of  LBD
 
+    int                 core_lbd_cut;
+    float               global_lbd_sum;
+    MyQueue<int>        lbd_queue;  // For computing moving averages of recent LBD values.
+
+
     Var next_var; // Next variable to be created.
     ClauseAllocator ca;
 
@@ -413,6 +445,7 @@ class Solver
     double progressEstimate() const; // DELETE THIS ?? IT'S NOT VERY USEFUL ...
     bool withinBudget() const;
     bool reduceDB_needed();
+    bool restart_needed(int nof_conflicts, int conflictC);
     void relocAll(ClauseAllocator& to);
 
 #ifdef BIN_DRUP
@@ -723,6 +756,26 @@ inline bool Solver::reduceDB_needed()
         return (learnts.size() - nAssigns() >= max_learnts);
     }
     return (conflicts - last_conflicts >= reduceDB_at_confl);
+}
+
+inline bool Solver::restart_needed(int nof_conflicts, int conflictC)
+{
+    if(glucose_restart){
+        if(!cached){
+            restart =
+            lbd_queue.full() && (lbd_queue.avg() * 0.8 > global_lbd_sum / conflicts);
+            cached = true;
+        }
+
+        if(restart){
+            lbd_queue.clear();
+            cached = false;
+        }
+
+        return restart;
+    } else {
+        return ((nof_conflicts >= 0 && conflictC >= nof_conflicts) || !withinBudget());
+    }
 }
 
 // FIXME: after the introduction of asynchronous interrruptions the solve-versions that return a

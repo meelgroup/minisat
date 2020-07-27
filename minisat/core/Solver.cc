@@ -66,6 +66,7 @@ static IntOption opt_phase_saving(_cat, "phase-saving",
                                   2, IntRange(0, 2));
 static BoolOption opt_rnd_init_act(_cat, "rnd-init", "Randomize the initial activity", false);
 static BoolOption opt_luby_restart(_cat, "luby", "Use the Luby restart sequence", true);
+static BoolOption opt_glucose_restart(_cat, "glu-rst", "Use  glucose restarts", true);
 static IntOption opt_restart_first(_cat, "rfirst", "The base restart interval", 100,
                                    IntRange(1, INT32_MAX));
 static DoubleOption opt_restart_inc(_cat, "rinc", "Restart interval increase factor", 2,
@@ -101,6 +102,7 @@ Solver::Solver()
       random_var_freq(opt_random_var_freq),
       random_seed(opt_random_seed),
       luby_restart(opt_luby_restart),
+      glucose_restart(opt_glucose_restart),
       ccmin_mode(opt_ccmin_mode),
       phase_saving(opt_phase_saving),
       rnd_pol(false),
@@ -155,6 +157,9 @@ Solver::Solver()
       simpDB_props(0),
       progress_estimate(0),
       remove_satisfied(true),
+      core_lbd_cut(2),
+      global_lbd_sum(0),
+      lbd_queue(50),
       next_var(0),
 
       num_locked_for_data_gen(0)
@@ -1142,6 +1147,8 @@ lbool Solver::search(int nof_conflicts)
     int conflictC = 0;
     vec<Lit> learnt_clause;
     unsigned int glue, glue_before_minim;
+    cached = false;
+
     starts++;
     conflicts_this_restart = 0;
 
@@ -1166,6 +1173,13 @@ lbool Solver::search(int nof_conflicts)
             cancelUntil(backtrack_level);
 
             int clid = 0;
+
+            glue--;
+            if (glucose_restart){
+                cached = false;
+                lbd_queue.push(glue);
+                global_lbd_sum += (glue > 50 ? 50 : glue);
+            }
 
             if (learnt_clause.size() == 1) {
                 uncheckedEnqueue(learnt_clause[0]);
@@ -1241,7 +1255,7 @@ lbool Solver::search(int nof_conflicts)
 
         } else {
             // NO CONFLICT
-            if ((nof_conflicts >= 0 && conflictC >= nof_conflicts) || !withinBudget()) {
+            if (restart_needed(nof_conflicts, conflictC)){
                 // Reached bound on number of conflicts:
                 progress_estimate = progressEstimate();
                 cancelUntil(0);
