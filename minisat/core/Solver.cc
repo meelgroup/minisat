@@ -159,7 +159,9 @@ Solver::Solver()
       remove_satisfied(true),
       core_lbd_cut(2),
       global_lbd_sum(0),
+      global_pred_sum(0),
       lbd_queue(50),
+      pred_queue(50),
       next_var(0),
 
       num_locked_for_data_gen(0)
@@ -1197,6 +1199,28 @@ lbool Solver::search(int nof_conflicts)
                     ca[cr].stats.ID = clauseID;
                 }
                 ca[cr].stats.locked_for_data_gen = false;
+
+#ifdef PREDICT_MODE
+            if(pred_rdb){
+                Clause& c = ca[cr];
+                const uint32_t act_ranking_top_10 = 5;
+//                 std::ceil((double) (i + 1) / ((double)learnts.size() / 10.0));
+                double act_ranking_rel = 5;
+//                 double act_ranking_rel = (double) (i + 1) / (double)learnts.size();
+
+                int64_t last_touched_diff = (int64_t)conflicts - (int64_t)c.stats.last_touched;
+                c.stats.pred = predictors->predict_short(
+                    &c,
+                    conflicts,
+                    last_touched_diff,
+                    act_ranking_rel,
+                    act_ranking_top_10
+                );
+                pred_queue.push(c.stats.pred);
+
+            }
+#endif
+
 #ifdef STATS_MODE
                 if (myrnd <= cldatadumpratio) {
                     to_dump = true;

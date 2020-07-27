@@ -350,7 +350,9 @@ public:
 
     int                 core_lbd_cut;
     float               global_lbd_sum;
+    float               global_pred_sum;
     MyQueue<int>        lbd_queue;  // For computing moving averages of recent LBD values.
+    MyQueue<int>        pred_queue;  // For computing moving averages of recent LBD values.
 
 
     Var next_var; // Next variable to be created.
@@ -760,6 +762,20 @@ inline bool Solver::reduceDB_needed()
 
 inline bool Solver::restart_needed(int nof_conflicts, int conflictC)
 {
+    if(pred_rst){
+        if(!cached){
+            restart =
+            pred_queue.full() && (pred_queue.avg() * 0.8 > global_pred_sum / conflicts);
+            cached = true;
+        }
+
+        if(restart){
+            pred_queue.clear();
+            cached = false;
+        }
+
+        return restart;
+    }
     if(glucose_restart){
         if(!cached){
             restart =
