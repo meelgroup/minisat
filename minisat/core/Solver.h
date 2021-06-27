@@ -775,15 +775,21 @@ inline bool Solver::restart_needed(int nof_conflicts, int conflictC)
 {
     if(pred_rst){
         if(!cached){
+            if (pred_queue.full() && verbosity > 1)
+             printf("c pred_queue.avg = %.2f global sum = %.2f\n",
+                   pred_queue.avg() * 0.8, global_pred_sum/conflicts);
             restart =
-            pred_queue.full() && (pred_queue.avg() * 0.8 > global_pred_sum / conflicts);
+                pred_queue.full()
+                && (pred_queue.avg() * 0.8 < global_pred_sum / conflicts);
             cached = true;
         }
 
         if(restart){
             pred_queue.clear();
             cached = false;
-        }
+            if(verbosity > 1)
+                printf("r @ cfl %lu\n", conflicts);
+       }
 
         return restart;
     }
