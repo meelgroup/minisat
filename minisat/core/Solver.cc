@@ -869,16 +869,6 @@ CRef Solver::propagate()
 |    Remove half of the learnt clauses, minus the clauses locked by the current assignment. Locked
 |    clauses are clauses that are reason to some assignment. Binary clauses are never removed.
 |________________________________________________________________________________________________@*/
-struct reduceDB_lt {
-    ClauseAllocator& ca;
-    reduceDB_lt(ClauseAllocator& ca_) : ca(ca_)
-    {
-    }
-    bool operator()(CRef x, CRef y)
-    {
-        return ca[x].size() > 2 && (ca[y].size() == 2 || ca[x].activity() < ca[y].activity());
-    }
-};
 
 struct reduceDB_pred {
     ClauseAllocator& ca;
@@ -1182,6 +1172,8 @@ lbool Solver::search(int nof_conflicts)
                 lbd_queue.push(glue);
                 global_lbd_sum += (glue > 50 ? 50 : glue);
             }
+
+
 
             if (learnt_clause.size() == 1) {
                 uncheckedEnqueue(learnt_clause[0]);

@@ -305,6 +305,17 @@ public:
         }
     };
 
+    struct reduceDB_lt {
+        ClauseAllocator& ca;
+        reduceDB_lt(ClauseAllocator& ca_) : ca(ca_)
+        {
+        }
+        bool operator()(CRef x, CRef y)
+        {
+            return ca[x].size() > 2 && (ca[y].size() == 2 || ca[x].activity() < ca[y].activity());
+        }
+    };
+
     struct ShrinkStackElem {
         uint32_t i;
         Lit l;
