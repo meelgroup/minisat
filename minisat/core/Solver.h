@@ -773,6 +773,7 @@ inline bool Solver::reduceDB_needed()
 
 inline bool Solver::restart_needed(int nof_conflicts, int conflictC)
 {
+#ifdef PREDICT_MODE
     if(pred_rst){
         if(!cached){
             if (pred_queue.full() && verbosity > 1)
@@ -793,6 +794,7 @@ inline bool Solver::restart_needed(int nof_conflicts, int conflictC)
 
         return restart;
     }
+#endif
     if(glucose_restart){
         if(!cached){
             restart =
