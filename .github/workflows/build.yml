@@ -2,9 +2,9 @@ name: build
 
 on:
   push:
-    branches: [ "*" ]
+    branches: ["*"]
   pull_request:
-    branches: [ "*" ]
+    branches: ["*"]
 
 jobs:
   build:
@@ -12,7 +12,6 @@ jobs:
 
     strategy:
       fail-fast: false
-
       matrix:
         os: [ubuntu-latest, macos-14, ubuntu-24.04-arm, macos-13]
         build_type: [Release]
@@ -39,37 +38,54 @@ jobs:
           brew update
           brew install cmake boost gmp mpfr wget zig
 
-      - name: Checkout Minisat
+      - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          repository: meelgroup/minisat
-          ref: 8c9ea22aff06fdf284b8bb13f8524a96f7d446af
-          path: minisat
 
       - name: Build Minisat (Linux)
         if: contains(matrix.os, 'ubuntu')
         run: |
-          cd minisat
           cmake -S . -B build \
             -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
             -DBUILD_SHARED_LIBS=OFF \
-            -DSTATICCOMPILE=ON \
+            -DSTATICCOMPILE=${{ matrix.staticcompile }} \
             -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
             -DZLIB_LIBRARY=-lz
           cmake --build build --parallel --config ${{ matrix.build_type }}
           sudo cmake --install build --config ${{ matrix.build_type }}
-          cd ..
+
+  macos-static-docker:
+    name: macOS static toolchain (Docker)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build macOS static image
+        run: |
+          docker build \
+            --file docker/macos-static.Dockerfile \
+            --tag minisat-macos-static .
+
+      - name: Extract macOS static artifacts
+        run: |
+          container_id=$(docker create minisat-macos-static)
+          docker cp "$container_id":/src/build-macos ./build-macos
+          docker rm "$container_id"
+
+      - name: Upload macOS static binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-static-binaries
+          path: build-macos
 
       - name: Build Minisat (macOS)
         if: contains(matrix.os, 'macos')
         run: |
-          cd minisat
           cmake -S . -B build \
             -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
             -DBUILD_SHARED_LIBS=OFF \
-            -DSTATICCOMPILE=ON \
+            -DSTATICCOMPILE=${{ matrix.staticcompile }} \
             -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
             -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/zig-macos-static.cmake
           cmake --build build --parallel --config ${{ matrix.build_type }}
           sudo cmake --install build --config ${{ matrix.build_type }}
-          cd ..

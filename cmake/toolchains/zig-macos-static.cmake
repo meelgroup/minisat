@@ -65,7 +65,13 @@ set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "Minimum macOS version" FOR
 
 set(CMAKE_C_FLAGS_INIT "-target x86_64-macos")
 set(CMAKE_CXX_FLAGS_INIT "-target x86_64-macos")
-set(CMAKE_EXE_LINKER_FLAGS_INIT "-target x86_64-macos -static")
+if (CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin")
+  set(_zig_link_flags "-target x86_64-macos")
+else()
+  set(_zig_link_flags "-target x86_64-macos -static")
+endif()
+
+set(CMAKE_EXE_LINKER_FLAGS_INIT "${_zig_link_flags}")
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
