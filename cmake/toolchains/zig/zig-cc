@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -euo pipefail
+if [ "${ZIG:-}" = "" ]; then
+  if [ "${ZIG_EXECUTABLE:-}" != "" ]; then
+    ZIG_BIN="$ZIG_EXECUTABLE"
+  elif command -v zig >/dev/null 2>&1; then
+    ZIG_BIN=$(command -v zig)
+  else
+    echo "zig compiler not found; set the ZIG environment variable" >&2
+    exit 1
+  fi
+else
+  ZIG_BIN="$ZIG"
+fi
+args=()
+for arg in "$@"; do
+  case "$arg" in
+    -v|-Wl,-v)
+      ;;
+    *)
+      args+=("$arg")
+      ;;
+  esac
+done
+exec "$ZIG_BIN" cc "${args[@]}"

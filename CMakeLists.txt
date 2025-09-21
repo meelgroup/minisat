@@ -33,7 +33,48 @@ SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 #--------------------------------------------------------------------------------------------------
 # Dependencies:
 
-find_package(ZLIB)
+if (STATICCOMPILE)
+  set(ZLIB_USE_STATIC_LIBS ON)
+endif()
+
+if (STATICCOMPILE AND APPLE)
+  set(ZLIB_FOUND FALSE)
+else()
+  find_package(ZLIB QUIET)
+endif()
+
+if (NOT ZLIB_FOUND AND STATICCOMPILE AND APPLE)
+  if (CMAKE_VERSION VERSION_LESS 3.11)
+    message(FATAL_ERROR "Static macOS builds require CMake 3.11 or newer to fetch zlib")
+  endif()
+
+  include(FetchContent)
+  FetchContent_Declare(minisat_zlib
+    URL      https://zlib.net/zlib-1.3.1.tar.xz
+    URL_HASH SHA256=38ef96b8dfe510d42707d9c781877914792541133e1870841463bfa73f883e32)
+  set(FETCHCONTENT_QUIET OFF)
+  FetchContent_MakeAvailable(minisat_zlib)
+
+  set(ZLIB_FOUND TRUE)
+  set(ZLIB_INCLUDE_DIR "${minisat_zlib_BINARY_DIR};${minisat_zlib_SOURCE_DIR}" CACHE STRING "Bundled zlib include directories" FORCE)
+  if (NOT TARGET minisat_zlib)
+    add_library(minisat_zlib STATIC IMPORTED GLOBAL)
+    set_target_properties(minisat_zlib PROPERTIES
+      IMPORTED_LOCATION "${minisat_zlib_BINARY_DIR}/libz.a"
+      INTERFACE_INCLUDE_DIRECTORIES "${minisat_zlib_BINARY_DIR};${minisat_zlib_SOURCE_DIR}")
+    if (TARGET zlibstatic)
+      add_dependencies(minisat_zlib zlibstatic)
+    endif()
+  endif()
+  set(ZLIB_LIBRARY minisat_zlib CACHE STRING "Bundled zlib target" FORCE)
+  set(ZLIB_LIBRARY_RELEASE minisat_zlib CACHE STRING "Bundled zlib target" FORCE)
+  set(ZLIB_LIBRARY_DEBUG minisat_zlib CACHE STRING "Bundled zlib target" FORCE)
+endif()
+
+if (NOT ZLIB_FOUND)
+  message(FATAL_ERROR "Unable to locate zlib -- provide an existing installation or enable STATICCOMPILE on macOS to use the bundled copy")
+endif()
+
 include_directories(${ZLIB_INCLUDE_DIR})
 include_directories(${minisat_SOURCE_DIR})
 include (GenerateExportHeader)
@@ -54,8 +95,13 @@ endif()
 
 if (NOT BUILD_SHARED_LIBS)
     if (NOT MSVC)
-        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static -Wl,--whole-archive -lpthread -Wl,--no-whole-archive -static ")
         set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+
+        if (APPLE)
+            set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static -Wl,-dead_strip")
+        else()
+            set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static -Wl,--whole-archive -lpthread -Wl,--no-whole-archive -static ")
+        endif()
 
         # removing -rdynamic that's automatically added
         foreach (language CXX C)
@@ -64,7 +110,6 @@ if (NOT BUILD_SHARED_LIBS)
                                  " "
                                  replacement
                                  "${${VAR_TO_MODIFY}}")
-            #message("Original (${VAR_TO_MODIFY}) is ${${VAR_TO_MODIFY}} replacement is ${replacement}")
             set(${VAR_TO_MODIFY} "${replacement}" CACHE STRING "Default flags for ${build_config} configuration" FORCE)
         endforeach()
     endif()

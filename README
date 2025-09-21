@@ -56,3 +56,27 @@ Examples:
 Run minisat with same heuristics as version 2.0:
 
 > minisat <cnf-file> -no-luby -rinc=1.5 -phase-saving=0 -rnd-freq=0.02
+
+================================================================================
+macOS static builds
+
+- The Apple toolchains do not ship a static C runtime, so building a "mostly
+  static" binary requires an alternate toolchain.  This repository provides a
+  CMake toolchain file that drives Zig's cross compiler to produce macOS
+  binaries with all Minisat components and third-party libraries linked
+  statically while still depending on Apple's `libSystem` at runtime.
+
+- Install [Zig](https://ziglang.org/) 0.12 or newer and configure the build
+  using the provided toolchain:
+
+  > cmake -S . -B build-macos \
+          -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/zig-macos-static.cmake \
+          -DSTATICCOMPILE=ON
+  > cmake --build build-macos
+
+- A reproducible environment is also available through Docker:
+
+  > docker build -f docker/macos-static.Dockerfile -t minisat-macos-static .
+
+  The resulting image contains the cross-compiled macOS binaries under
+  `/src/build-macos`.
