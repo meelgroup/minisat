@@ -33,12 +33,12 @@ jobs:
             staticcompile: 'ON'
             toolchain: "-DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/zig-macos-static.cmake"
             zlib_flag: ""
-          - os: macos-13
-            pkg_suffix: macos-x86_64
-            build_type: Release
-            staticcompile: 'ON'
-            toolchain: "-DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/zig-macos-static.cmake"
-            zlib_flag: ""
+          # - os: macos-13
+          #   pkg_suffix: macos-x86_64
+          #   build_type: Release
+          #   staticcompile: 'ON'
+          #   toolchain: "-DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/zig-macos-static.cmake"
+          #   zlib_flag: ""
 
     steps:
       - name: Install dependencies for Linux
