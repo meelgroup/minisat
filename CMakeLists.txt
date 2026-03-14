@@ -53,7 +53,7 @@ if (NOT ZLIB_FOUND AND STATICCOMPILE AND APPLE)
 
   include(FetchContent)
   FetchContent_Declare(minisat_zlib
-    URL      https://zlib.net/zlib-1.3.1.tar.xz
+    URL      https://github.com/madler/zlib/releases/download/v1.3.1/zlib-1.3.1.tar.gz
     URL_HASH SHA256=38ef96b8dfe510d42707d9c781877914792541133e1870841463bfa73f883e32)
   set(FETCHCONTENT_QUIET OFF)
   FetchContent_MakeAvailable(minisat_zlib)
